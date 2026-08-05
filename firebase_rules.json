@@ -1,0 +1,41 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid",
+        ".write": "auth != null && auth.uid == $uid",
+        "security": {
+          "revocationTimestamp": { ".validate": "newData.isNumber()" },
+          "lastLoginTimestamp": { ".validate": "newData.isNumber()" }
+        }
+      }
+    },
+    "medicines": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid",
+        ".write": "auth != null && auth.uid == $uid",
+        "$medicineId": {
+          ".validate": "newData.hasChildren(['id', 'name', 'dosage'])"
+        }
+      }
+    },
+    "reminders": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid",
+        ".write": "auth != null && auth.uid == $uid"
+      }
+    },
+    "history": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid",
+        ".write": "auth != null && auth.uid == $uid"
+      }
+    },
+    "family": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid",
+        ".write": "auth != null && auth.uid == $uid"
+      }
+    }
+  }
+}
