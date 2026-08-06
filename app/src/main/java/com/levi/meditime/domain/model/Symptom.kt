@@ -3,6 +3,7 @@ package com.levi.meditime.domain.model
 data class Symptom(
     val symptomId: String,
     val userId: String,
+    val familyMemberId: String? = null,
     val medicineId: String? = null,
     val name: String,
     val severity: Int,

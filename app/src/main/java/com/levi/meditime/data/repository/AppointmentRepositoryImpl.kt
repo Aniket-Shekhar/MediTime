@@ -30,6 +30,12 @@ class AppointmentRepositoryImpl @Inject constructor(
         }
     }
 
+    override fun getAppointmentsForMember(memberId: String): Flow<Resource<List<Appointment>>> {
+        return dao.getAppointmentsForMember(memberId).map { entities ->
+            Resource.Success(entities.map { it.toDomain() })
+        }
+    }
+
     override suspend fun addAppointment(appointment: Appointment): Resource<Unit> {
         return try {
             val updated = appointment.copy(userId = userId)

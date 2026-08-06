@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.TrendingUp
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
@@ -32,6 +33,7 @@ import com.levi.meditime.presentation.theme.*
 
 @Composable
 fun ReportDashboardScreen(
+    onBack: (() -> Unit)? = null,
     viewModel: ReportViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -63,6 +65,15 @@ fun ReportDashboardScreen(
                         .padding(top = 60.dp, start = 24.dp, end = 24.dp, bottom = 16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    if (onBack != null) {
+                        IconButton(
+                            onClick = onBack,
+                            modifier = Modifier.padding(end = 12.dp).border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f), CircleShape)
+                        ) {
+                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, null, tint = MaterialTheme.colorScheme.onSurface)
+                        }
+                    }
+                    
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Analytics",
@@ -71,7 +82,7 @@ fun ReportDashboardScreen(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "Your health summary",
+                            text = "Health summary for you & family",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

@@ -35,6 +35,9 @@ fun FamilyMemberDetailScreen(
     memberId: String, // Kept for HiltViewModel scope
     onBack: () -> Unit,
     onNavigateToMedicines: (String) -> Unit,
+    onNavigateToReports: (String) -> Unit,
+    onNavigateToSymptoms: (String) -> Unit,
+    onNavigateToAppointments: (String) -> Unit,
     viewModel: FamilyMemberDetailViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -153,19 +156,19 @@ fun FamilyMemberDetailScreen(
                             icon = Icons.Rounded.Assessment, 
                             title = "Health Reports", 
                             count = "2 New", 
-                            onClick = { showComingSoon() }
+                            onClick = { onNavigateToReports(mem.id) }
                         )
                         ManagementRow(
                             icon = Icons.Rounded.Favorite, 
                             title = "Symptom Log", 
                             count = "Today", 
-                            onClick = { showComingSoon() }
+                            onClick = { onNavigateToSymptoms(mem.id) }
                         )
                         ManagementRow(
                             icon = Icons.Rounded.Event, 
                             title = "Appointments", 
                             count = "1 Upcoming", 
-                            onClick = { showComingSoon() }
+                            onClick = { onNavigateToAppointments(mem.id) }
                         )
                         ManagementRow(
                             icon = Icons.Rounded.History, 

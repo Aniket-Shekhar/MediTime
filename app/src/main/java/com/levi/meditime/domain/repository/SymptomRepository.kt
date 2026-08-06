@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.Flow
 
 interface SymptomRepository {
     fun getAllSymptoms(): Flow<Resource<List<Symptom>>>
+    fun getSymptomsForMember(memberId: String): Flow<Resource<List<Symptom>>>
     suspend fun addSymptom(symptom: Symptom): Resource<Unit>
     suspend fun deleteSymptom(symptom: Symptom): Resource<Unit>
     fun getSymptomsForTimeline(days: Int): Flow<Resource<List<Symptom>>>

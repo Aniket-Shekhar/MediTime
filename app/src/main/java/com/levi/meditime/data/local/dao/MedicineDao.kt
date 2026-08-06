@@ -132,6 +132,9 @@ interface MedicineDao {
     @Query("SELECT * FROM symptoms WHERE userId = :userId ORDER BY date DESC, time DESC")
     fun getAllSymptoms(userId: String): Flow<List<SymptomEntity>>
 
+    @Query("SELECT * FROM symptoms WHERE familyMemberId = :memberId ORDER BY date DESC, time DESC")
+    fun getSymptomsForMember(memberId: String): Flow<List<SymptomEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSymptom(symptom: SymptomEntity)
 
@@ -154,6 +157,9 @@ interface MedicineDao {
     // Appointments
     @Query("SELECT * FROM appointments WHERE userId = :userId ORDER BY date ASC, time ASC")
     fun getAllAppointments(userId: String): Flow<List<AppointmentEntity>>
+
+    @Query("SELECT * FROM appointments WHERE familyMemberId = :memberId ORDER BY date ASC, time ASC")
+    fun getAppointmentsForMember(memberId: String): Flow<List<AppointmentEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAppointment(appointment: AppointmentEntity)

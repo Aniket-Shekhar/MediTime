@@ -177,8 +177,17 @@ fun NavGraph(
                 onEdit = { /* Navigate to Edit */ }
             )
         }
-        composable(Screen.Reports.route) {
-            ReportDashboardScreen()
+        composable(
+            route = Screen.Reports.route,
+            arguments = listOf(navArgument("memberId") { 
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+            })
+        ) {
+            ReportDashboardScreen(
+                onBack = { navController.popBackStack() }
+            )
         }
         composable(Screen.AddMedicine.route) {
             AddMedicineScreen(
@@ -245,6 +254,15 @@ fun NavGraph(
                 onNavigateToMedicines = { id ->
                     // Logic to navigate to medicine list filtered by user
                     navController.navigate(Screen.Medicines.route)
+                },
+                onNavigateToReports = { id ->
+                    navController.navigate(Screen.Reports.createRoute(id))
+                },
+                onNavigateToSymptoms = { id ->
+                    navController.navigate(Screen.Symptoms.createRoute(id))
+                },
+                onNavigateToAppointments = { id ->
+                    navController.navigate(Screen.Appointments.createRoute(id))
                 }
             )
         }
@@ -279,7 +297,14 @@ fun NavGraph(
                 onBack = { navController.popBackStack() }
             )
         }
-        composable(Screen.Symptoms.route) {
+        composable(
+            route = Screen.Symptoms.route,
+            arguments = listOf(navArgument("memberId") { 
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+            })
+        ) {
             SymptomDashboardScreen(onBack = { navController.popBackStack() })
         }
         composable(Screen.Caretakers.route) {
@@ -288,7 +313,14 @@ fun NavGraph(
         composable(Screen.Prescriptions.route) {
             PrescriptionListScreen(onBack = { navController.popBackStack() })
         }
-        composable(Screen.Appointments.route) {
+        composable(
+            route = Screen.Appointments.route,
+            arguments = listOf(navArgument("memberId") { 
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+            })
+        ) {
             AppointmentListScreen(onBack = { navController.popBackStack() })
         }
         composable(Screen.SOS.route) {

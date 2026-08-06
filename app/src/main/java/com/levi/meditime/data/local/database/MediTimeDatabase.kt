@@ -31,7 +31,7 @@ import com.levi.meditime.data.local.entity.UserProfileEntity
         AppointmentEntity::class,
         UserProfileEntity::class
     ],
-    version = 12,
+    version = 13,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -39,6 +39,13 @@ abstract class MediTimeDatabase : RoomDatabase() {
     abstract fun medicineDao(): MedicineDao
 
     companion object {
+        val MIGRATION_12_13 = object : androidx.room.migration.Migration(12, 13) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE symptoms ADD COLUMN familyMemberId TEXT")
+                db.execSQL("ALTER TABLE appointments ADD COLUMN familyMemberId TEXT")
+            }
+        }
+
         val MIGRATION_10_11 = object : androidx.room.migration.Migration(10, 11) {
             override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
                 // Add selectedDays column to medicines

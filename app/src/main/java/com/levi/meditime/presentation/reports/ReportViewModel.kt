@@ -36,8 +36,11 @@ data class ReportState(
 class ReportViewModel @Inject constructor(
     private val repository: MedicineRepository,
     private val authRepository: AuthRepository,
-    private val pdfManager: PdfManager
+    private val pdfManager: PdfManager,
+    savedStateHandle: androidx.lifecycle.SavedStateHandle
 ) : ViewModel() {
+
+    private val memberId: String? = savedStateHandle["memberId"]
 
     private val _state = MutableStateFlow(ReportState())
     val state = _state.asStateFlow()
@@ -54,16 +57,25 @@ class ReportViewModel @Inject constructor(
     fun exportReport() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
-            val user = authRepository.currentUser.first()
-            val history = repository.getAllHistory().first()
-            val medicines = repository.getAllMedicines().first()
+            
+            val historyFlow = if (memberId != null) repository.getHistoryForMember(memberId) else repository.getAllHistory()
+            val history = historyFlow.first()
+            
+            val medicinesFlow = if (memberId != null) repository.getAllMedicines().map { list -> list.filter { it.familyMemberId == memberId } } else repository.getAllMedicines()
+            val medicines = medicinesFlow.first()
+
+            val user = if (memberId != null) {
+                repository.getAllFamilyMembers().first().find { it.id == memberId }?.name ?: "Family Member"
+            } else {
+                authRepository.currentUser.first()?.name ?: "User"
+            }
             
             val file = pdfManager.generateFullReport(
-                userName = user?.name ?: "User",
+                userName = user,
                 adherence = _state.value.adherence,
                 history = history,
                 medicines = medicines,
-                fileName = "MediTime_Report_${System.currentTimeMillis()}"
+                fileName = "MediTime_Report_${if (memberId != null) "Member_" else ""}${System.currentTimeMillis()}"
             )
             
             _state.update { 
@@ -84,7 +96,9 @@ class ReportViewModel @Inject constructor(
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
             
-            repository.getAllHistory().distinctUntilChanged().collectLatest { history ->
+            val historyFlow = if (memberId != null) repository.getHistoryForMember(memberId) else repository.getAllHistory()
+            
+            historyFlow.distinctUntilChanged().collectLatest { history ->
                 val taken = history.count { it.status == DoseStatus.TAKEN }
                 val missed = history.count { it.status == DoseStatus.MISSED }
                 val total = history.size
@@ -94,7 +108,7 @@ class ReportViewModel @Inject constructor(
                         adherence = if (total > 0) (taken * 100) / total else 0,
                         takenCount = taken,
                         missedCount = missed,
-                        refillCount = 2,
+                        refillCount = if (memberId != null) 0 else 2, // Placeholder
                         streak = calculateStreak(history),
                         chartPoints = calculateChartPoints(history, it.selectedPeriod),
                         isLoading = false

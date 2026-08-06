@@ -43,7 +43,11 @@ object DatabaseModule {
             "meditime_db"
         )
             .openHelperFactory(factory)
-            .addMigrations(MediTimeDatabase.MIGRATION_10_11, MediTimeDatabase.MIGRATION_11_12)
+            .addMigrations(
+                MediTimeDatabase.MIGRATION_10_11, 
+                MediTimeDatabase.MIGRATION_11_12,
+                MediTimeDatabase.MIGRATION_12_13
+            )
             .fallbackToDestructiveMigration(true)
             .build()
     }

@@ -7,6 +7,7 @@ import androidx.room.PrimaryKey
 data class SymptomEntity(
     @PrimaryKey val symptomId: String,
     val userId: String,
+    val familyMemberId: String? = null,
     val medicineId: String?,
     val name: String,
     val severity: Int, // 1-10

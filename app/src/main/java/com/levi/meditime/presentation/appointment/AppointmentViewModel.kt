@@ -25,8 +25,11 @@ data class AppointmentState(
 class AppointmentViewModel @Inject constructor(
     private val repository: AppointmentRepository,
     private val themePreferences: com.levi.meditime.datastore.ThemePreferences,
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    savedStateHandle: androidx.lifecycle.SavedStateHandle
 ) : ViewModel() {
+
+    private val memberId: String? = savedStateHandle["memberId"]
 
     val userSettings = themePreferences.userSettings
 
@@ -48,7 +51,8 @@ class AppointmentViewModel @Inject constructor(
 
     private fun loadAppointments() {
         viewModelScope.launch {
-            repository.getAllAppointments().collectLatest { resource ->
+            val flow = if (memberId != null) repository.getAppointmentsForMember(memberId) else repository.getAllAppointments()
+            flow.collectLatest { resource ->
                 when (resource) {
                     is Resource.Success -> {
                         _state.value = _state.value.copy(
@@ -75,6 +79,7 @@ class AppointmentViewModel @Inject constructor(
             val appointment = Appointment(
                 appointmentId = UUID.randomUUID().toString(),
                 userId = userId,
+                familyMemberId = memberId,
                 doctorName = doctor,
                 doctorPhone = phone,
                 hospitalName = hospital,

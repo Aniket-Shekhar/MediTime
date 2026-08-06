@@ -27,6 +27,9 @@ interface MedicineRepository {
     fun getHistoryForPeriod(start: Long, end: Long): Flow<List<History>>
     fun getAllHistory(): Flow<List<History>>
     
+    // Family
+    fun getAllFamilyMembers(): Flow<List<com.levi.meditime.domain.model.FamilyMember>>
+    
     // Statistics
     fun getMedicinesCount(): Flow<Int>
     fun getMedicinesCountForMember(memberId: String): Flow<Int>

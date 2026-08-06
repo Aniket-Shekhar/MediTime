@@ -29,8 +29,11 @@ class SymptomViewModel @Inject constructor(
     private val repository: SymptomRepository,
     private val medicineRepository: com.levi.meditime.domain.repository.MedicineRepository,
     private val themePreferences: com.levi.meditime.datastore.ThemePreferences,
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    savedStateHandle: androidx.lifecycle.SavedStateHandle
 ) : ViewModel() {
+
+    private val memberId: String? = savedStateHandle["memberId"]
 
     val userSettings = themePreferences.userSettings
 
@@ -52,7 +55,8 @@ class SymptomViewModel @Inject constructor(
 
     private fun loadSymptoms() {
         viewModelScope.launch {
-            repository.getAllSymptoms().collectLatest { resource ->
+            val flow = if (memberId != null) repository.getSymptomsForMember(memberId) else repository.getAllSymptoms()
+            flow.collectLatest { resource ->
                 when (resource) {
                     is Resource.Success -> {
                         val symptoms = resource.data ?: emptyList()
@@ -78,7 +82,8 @@ class SymptomViewModel @Inject constructor(
                 .maxByOrNull { it.value.size }?.key
 
             // Correlate with missed medicines
-            val history = medicineRepository.getAllHistory().first()
+            val historyFlow = if (memberId != null) medicineRepository.getHistoryForMember(memberId) else medicineRepository.getAllHistory()
+            val history = historyFlow.first()
             val missedTimes = history.filter { it.status == com.levi.meditime.domain.model.DoseStatus.MISSED }
                 .map { it.scheduledTime }
             
@@ -107,6 +112,7 @@ class SymptomViewModel @Inject constructor(
             val symptom = Symptom(
                 symptomId = UUID.randomUUID().toString(),
                 userId = userId,
+                familyMemberId = memberId,
                 name = name,
                 severity = severity,
                 severityLevel = severityLevel,

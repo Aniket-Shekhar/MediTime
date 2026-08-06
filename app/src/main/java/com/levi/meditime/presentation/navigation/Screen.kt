@@ -9,7 +9,9 @@ sealed class Screen(val route: String) {
     // Main Tabs
     object Dashboard : Screen("dashboard")
     object Medicines : Screen("medicines")
-    object Reports : Screen("reports")
+    object Reports : Screen("reports?memberId={memberId}") {
+        fun createRoute(memberId: String? = null) = if (memberId != null) "reports?memberId=$memberId" else "reports"
+    }
     object Family : Screen("family")
     object Account : Screen("account")
 
@@ -20,10 +22,14 @@ sealed class Screen(val route: String) {
     object EditProfile : Screen("edit_profile")
     object LinkedDevices : Screen("linked_devices")
     object EmergencyContacts : Screen("emergency_contacts")
-    object Symptoms : Screen("symptoms")
+    object Symptoms : Screen("symptoms?memberId={memberId}") {
+        fun createRoute(memberId: String? = null) = if (memberId != null) "symptoms?memberId=$memberId" else "symptoms"
+    }
     object Caretakers : Screen("caretakers")
     object Prescriptions : Screen("prescriptions")
-    object Appointments : Screen("appointments")
+    object Appointments : Screen("appointments?memberId={memberId}") {
+        fun createRoute(memberId: String? = null) = if (memberId != null) "appointments?memberId=$memberId" else "appointments"
+    }
     object ProfileSelection : Screen("profile_selection")
     object SOS : Screen("sos")
     object PrescriptionScanner : Screen("prescription_scanner")

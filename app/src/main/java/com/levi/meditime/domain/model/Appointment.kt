@@ -3,6 +3,7 @@ package com.levi.meditime.domain.model
 data class Appointment(
     val appointmentId: String = "",
     val userId: String = "",
+    val familyMemberId: String? = null,
     val doctorName: String = "",
     val doctorPhone: String? = null,
     val hospitalName: String = "",

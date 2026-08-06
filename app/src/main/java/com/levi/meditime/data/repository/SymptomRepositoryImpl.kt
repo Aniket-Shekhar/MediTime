@@ -31,6 +31,12 @@ class SymptomRepositoryImpl @Inject constructor(
         }
     }
 
+    override fun getSymptomsForMember(memberId: String): Flow<Resource<List<Symptom>>> {
+        return dao.getSymptomsForMember(memberId).map { entities ->
+            Resource.Success(entities.map { it.toDomain() })
+        }
+    }
+
     override suspend fun addSymptom(symptom: Symptom): Resource<Unit> {
         return try {
             dao.insertSymptom(symptom.toEntity())

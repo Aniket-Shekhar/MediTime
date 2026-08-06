@@ -108,16 +108,20 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                 }
             }
 
-            // Simplified Theme & Root Layout to resolve touch issues
-            MediTimeMedicineReminderTheme(
-                darkTheme = when (themeMode) {
-                    ThemeMode.LIGHT -> false
-                    ThemeMode.DARK -> true
-                    ThemeMode.SYSTEM -> androidx.compose.foundation.isSystemInDarkTheme()
-                },
-                accessibilityMode = accessibilityMode
-            ) {
-                // Global Session Revocation Listener
+            Crossfade(
+                targetState = themeMode,
+                animationSpec = tween(durationMillis = 600),
+                label = "themeSwitch"
+            ) { mode: ThemeMode ->
+                MediTimeMedicineReminderTheme(
+                    darkTheme = when (mode) {
+                        ThemeMode.LIGHT -> false
+                        ThemeMode.DARK -> true
+                        ThemeMode.SYSTEM -> androidx.compose.foundation.isSystemInDarkTheme()
+                    },
+                    accessibilityMode = accessibilityMode
+                ) {
+                    // Global Session Revocation Listener
                 LaunchedEffect(user) {
                     user?.let {
                         val uid = it.uid
@@ -370,4 +374,5 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
             }
         }
     }
+}
 }

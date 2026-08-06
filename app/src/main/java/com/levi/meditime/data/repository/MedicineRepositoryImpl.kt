@@ -140,6 +140,12 @@ class MedicineRepositoryImpl @Inject constructor(
         }
     }
 
+    override fun getAllFamilyMembers(): Flow<List<com.levi.meditime.domain.model.FamilyMember>> {
+        return dao.getAllFamilyMembers().map { entities ->
+            entities.map { it.toDomain() }
+        }
+    }
+
     override fun getMedicinesCount(): Flow<Int> = dao.getMedicinesCount()
 
     override fun getMedicinesCountForMember(memberId: String): Flow<Int> = dao.getMedicinesCountForMember(memberId)

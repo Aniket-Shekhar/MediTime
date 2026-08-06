@@ -7,6 +7,7 @@ import androidx.room.PrimaryKey
 data class AppointmentEntity(
     @PrimaryKey val appointmentId: String,
     val userId: String,
+    val familyMemberId: String? = null,
     val doctorName: String,
     val doctorPhone: String?,
     val hospitalName: String,
