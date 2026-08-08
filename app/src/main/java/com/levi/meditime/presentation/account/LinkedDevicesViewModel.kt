@@ -102,9 +102,13 @@ class LinkedDevicesViewModel @Inject constructor(
                 return@launch
             }
 
-            val code = (100000..999999).random().toString()
-            dbRef.child("users").child(userId).child("invite_code").setValue(code).await()
-            _state.value = _state.value.copy(inviteCode = code)
+            try {
+                val code = (100000..999999).random().toString()
+                dbRef.child("users").child(userId).child("invite_code").setValue(code).await()
+                _state.value = _state.value.copy(inviteCode = code)
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(error = "Failed to generate code: ${e.message}")
+            }
         }
     }
 

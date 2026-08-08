@@ -121,24 +121,29 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                     },
                     accessibilityMode = accessibilityMode
                 ) {
-                    // Global Session Revocation Listener
+                    // Global Session Revocation Listener with token propagation guard
                 LaunchedEffect(user) {
-                    user?.let {
-                        val uid = it.uid
-                        val securityRef = FirebaseDatabase.getInstance().getReference("users").child(uid).child("security")
-                        
-                        securityRef.get().addOnSuccessListener { snapshot ->
+                    user?.let { domainUser ->
+                        val uid = domainUser.uid
+                        try {
+                            // Part 1: Force token refresh to ensure RTDB connection is authenticated
+                            // This eliminates the "Permission Denied" race window on cold start.
+                            authRepository.ensureTokenPropagation()
+
+                            val securityRef = FirebaseDatabase.getInstance().getReference("users").child(uid).child("security")
+                            val snapshot = securityRef.get().await()
+
                             val lastLogin = snapshot.child("lastLoginTimestamp").getValue(Long::class.java) ?: 0L
                             val revocationTime = snapshot.child("revocationTimestamp").getValue(Long::class.java) ?: 0L
                             
                             if (revocationTime > lastLogin) {
-                                lifecycleScope.launch(exceptionHandler) {
-                                    authRepository.logout()
-                                    navController.navigate(Screen.Login.route) {
-                                        popUpTo(0) { inclusive = true }
-                                    }
+                                authRepository.logout()
+                                navController.navigate(Screen.Login.route) {
+                                    popUpTo(0) { inclusive = true }
                                 }
                             }
+                        } catch (e: Exception) {
+                            android.util.Log.e("MediTime_Crash", "Revocation check failed: ${e.message}")
                         }
                     }
                 }

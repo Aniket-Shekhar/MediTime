@@ -16,6 +16,7 @@ interface AuthRepository {
     suspend fun verifyBeforeUpdateEmail(newEmail: String): Resource<Unit>
     suspend fun reloadUser(): Resource<Unit>
     fun isEmailVerified(): Boolean
+    suspend fun ensureTokenPropagation() // Part of PRD 8/6 fix
     
     // Phone Verification
     fun sendOtp(

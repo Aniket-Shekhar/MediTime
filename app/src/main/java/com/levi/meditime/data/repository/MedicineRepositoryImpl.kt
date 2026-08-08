@@ -98,10 +98,14 @@ class MedicineRepositoryImpl @Inject constructor(
     }
 
     override suspend fun deleteRemindersForMedicine(medicineId: String) {
-        dao.deleteRemindersForMedicine(medicineId)
-        if (userId.isNotEmpty()) {
-            dbRef.child("reminders").child(userId).orderByChild("medicineId").equalTo(medicineId)
-                .get().await().children.forEach { it.ref.removeValue() }
+        try {
+            dao.deleteRemindersForMedicine(medicineId)
+            if (userId.isNotEmpty()) {
+                dbRef.child("reminders").child(userId).orderByChild("medicineId").equalTo(medicineId)
+                    .get().await().children.forEach { it.ref.removeValue() }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("MedicineRepo", "Error deleting reminders: ${e.message}")
         }
     }
 

@@ -184,6 +184,14 @@ class AuthRepositoryImpl @Inject constructor(
         return auth.currentUser?.isEmailVerified ?: false
     }
 
+    override suspend fun ensureTokenPropagation() {
+        try {
+            auth.currentUser?.getIdToken(false)?.await()
+        } catch (e: Exception) {
+            Log.e("AUTH_AUDIT", "Token propagation failed: ${e.message}")
+        }
+    }
+
     override fun sendOtp(
         phoneNumber: String,
         activity: android.app.Activity,
