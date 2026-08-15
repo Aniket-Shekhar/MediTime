@@ -124,8 +124,11 @@ fun AccountScreen(
                             modifier = Modifier.size(56.dp).clip(CircleShape),
                             color = MaterialTheme.colorScheme.primaryContainer
                         ) {
+                            val avatarUrl = remember(user?.name) {
+                                "https://ui-avatars.com/api/?name=${android.net.Uri.encode(user?.name ?: "User")}&background=14B8A6&color=fff"
+                            }
                             AsyncImage(
-                                model = user?.profileImage ?: "https://ui-avatars.com/api/?name=${user?.name ?: "User"}&background=14B8A6&color=fff",
+                                model = user?.profileImage ?: avatarUrl,
                                 contentDescription = "Profile",
                                 contentScale = ContentScale.Crop
                             )

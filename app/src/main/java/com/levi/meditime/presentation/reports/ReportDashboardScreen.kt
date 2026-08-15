@@ -89,22 +89,25 @@ fun ReportDashboardScreen(
                     }
 
                     if (state.reportFile != null) {
+                        val file = state.reportFile
                         IconButton(
                             onClick = { 
-                                try {
-                                    val uri = FileProvider.getUriForFile(
-                                        context,
-                                        "com.Digifluence.MediTime.provider",
-                                        state.reportFile!!
-                                    )
-                                    val intent = Intent(Intent.ACTION_SEND).apply {
-                                        type = "application/pdf"
-                                        putExtra(Intent.EXTRA_STREAM, uri)
-                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                if (file != null) {
+                                    try {
+                                        val uri = FileProvider.getUriForFile(
+                                            context,
+                                            "com.Digifluence.MediTime.provider",
+                                            file
+                                        )
+                                        val intent = Intent(Intent.ACTION_SEND).apply {
+                                            type = "application/pdf"
+                                            putExtra(Intent.EXTRA_STREAM, uri)
+                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        }
+                                        context.startActivity(Intent.createChooser(intent, "Share Report"))
+                                    } catch (e: Exception) {
+                                        android.util.Log.e("SHARE_ERROR", "Error: ${e.message}")
                                     }
-                                    context.startActivity(Intent.createChooser(intent, "Share Report"))
-                                } catch (e: Exception) {
-                                    android.util.Log.e("SHARE_ERROR", "Error: ${e.message}")
                                 }
                             },
                             modifier = Modifier.background(MaterialTheme.colorScheme.surface, CircleShape).size(48.dp).border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f), CircleShape)
@@ -285,7 +288,7 @@ fun AdherenceChart(points: List<ChartPoint>, modifier: Modifier = Modifier) {
 @Composable
 fun ReportStatCardSmall(label: String, value: String, icon: ImageVector, color: Color, modifier: Modifier = Modifier) {
     AppCard(
-        modifier = modifier.heightIn(min = 130.dp),
+        modifier = modifier.heightIn(min = 140.dp),
         backgroundColor = MaterialTheme.colorScheme.surface,
         border = true,
         elevation = 1.dp
@@ -310,7 +313,7 @@ fun ReportStatCardSmall(label: String, value: String, icon: ImageVector, color: 
                 text = label, 
                 style = MaterialTheme.typography.labelSmall, 
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
+                maxLines = 1,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )

@@ -38,6 +38,7 @@ fun AuthScreen(
     onAuthSuccess: () -> Unit,
     onNavigateToOtp: (String) -> Unit,
     onNavigateToEmailVerify: (String) -> Unit,
+    onBack: () -> Unit,
     loginViewModel: LoginViewModel = hiltViewModel(),
     registerViewModel: RegisterViewModel = hiltViewModel()
 ) {
@@ -57,7 +58,7 @@ fun AuthScreen(
             Spacer(modifier = Modifier.height(60.dp))
             
             IconButton(
-                onClick = { /* Back */ },
+                onClick = onBack,
                 modifier = Modifier.padding(start = 16.dp)
             ) {
                 Icon(Icons.AutoMirrored.Rounded.ArrowBack, null, tint = Color.White)
@@ -90,7 +91,7 @@ fun AuthScreen(
                 modifier = Modifier
                     .fillMaxSize(),
                 shape = RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp),
-                color = Color.White,
+                color = MaterialTheme.colorScheme.surface,
                 shadowElevation = 8.dp
             ) {
                 Column(
@@ -106,7 +107,7 @@ fun AuthScreen(
                             .fillMaxWidth()
                             .height(54.dp)
                             .clip(RoundedCornerShape(27.dp)),
-                        color = Color(0xFFF1F5F9)
+                        color = MaterialTheme.colorScheme.surfaceVariant
                     ) {
                         Box(modifier = Modifier.fillMaxSize().padding(4.dp)) {
                             Row(modifier = Modifier.fillMaxSize()) {
@@ -146,12 +147,18 @@ fun AuthScreen(
                     Spacer(modifier = Modifier.height(24.dp))
 
                     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        HorizontalDivider(modifier = Modifier.fillMaxWidth().alpha(0.1f), color = Color.Gray)
-                        Surface(color = Color.White, modifier = Modifier.padding(horizontal = 16.dp)) {
+                        HorizontalDivider(
+                            modifier = Modifier.fillMaxWidth(), 
+                            color = MaterialTheme.colorScheme.outlineVariant
+                        )
+                        Surface(
+                            color = MaterialTheme.colorScheme.surface, 
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        ) {
                             Text(
                                 text = "Or login with",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = OnSurfaceVariantLight
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -197,7 +204,7 @@ fun TabButton(
         modifier = modifier
             .fillMaxHeight()
             .clip(RoundedCornerShape(24.dp))
-            .background(if (isSelected) Color.White else Color.Transparent)
+            .background(if (isSelected) MaterialTheme.colorScheme.surface else Color.Transparent)
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
@@ -205,7 +212,7 @@ fun TabButton(
             text = text,
             style = MaterialTheme.typography.labelLarge,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-            color = if (isSelected) OnSurfaceLight else OnSurfaceVariantLight
+            color = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -222,6 +229,11 @@ fun LoginForm(
     val isPhoneMode by viewModel.isPhoneLoginMode.collectAsState()
     val phoneNumber by viewModel.phoneNumber.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val rememberMe by viewModel.rememberMe.collectAsState()
+    
+    val emailError by viewModel.emailError.collectAsState()
+    val passwordError by viewModel.passwordError.collectAsState()
+    val phoneError by viewModel.phoneError.collectAsState()
     
     var passwordVisible by remember { mutableStateOf(false) }
 
@@ -232,7 +244,8 @@ fun LoginForm(
                 onValueChange = viewModel::onEmailChange,
                 label = "Email Address",
                 icon = Icons.Rounded.Email,
-                placeholder = "example@domain.com"
+                placeholder = "example@domain.com",
+                error = emailError
             )
 
             PremiumTextField(
@@ -242,7 +255,8 @@ fun LoginForm(
                 icon = Icons.Rounded.Lock,
                 isPassword = true,
                 passwordVisible = passwordVisible,
-                onPasswordToggle = { passwordVisible = !passwordVisible }
+                onPasswordToggle = { passwordVisible = !passwordVisible },
+                error = passwordError
             )
         } else {
             PremiumTextField(
@@ -250,7 +264,8 @@ fun LoginForm(
                 onValueChange = viewModel::onPhoneNumberChange,
                 label = "Phone Number",
                 icon = Icons.Rounded.Phone,
-                placeholder = "+1 234 567 8900"
+                placeholder = "+1 234 567 8900",
+                error = phoneError
             )
         }
 
@@ -260,11 +275,27 @@ fun LoginForm(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(checked = false, onCheckedChange = {})
-                Text("Remember me", style = MaterialTheme.typography.bodySmall)
+                Checkbox(
+                    checked = rememberMe, 
+                    onCheckedChange = viewModel::onRememberMeChange,
+                    colors = CheckboxDefaults.colors(
+                        checkedColor = MaterialTheme.colorScheme.primary,
+                        uncheckedColor = MaterialTheme.colorScheme.outline
+                    )
+                )
+                Text(
+                    text = "Remember me", 
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
             }
-            TextButton(onClick = {}) {
-                Text("Forgot Password?", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+            TextButton(onClick = { viewModel.forgotPassword(onSuccess = onError, onError = onError) }) {
+                Text(
+                    text = "Forgot Password?", 
+                    color = MaterialTheme.colorScheme.primary, 
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
 
@@ -316,20 +347,30 @@ fun RegisterForm(
     val email by viewModel.email.collectAsState()
     val password by viewModel.password.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    
+    val nameError by viewModel.nameError.collectAsState()
+    val emailError by viewModel.emailError.collectAsState()
+    val passwordError by viewModel.passwordError.collectAsState()
+    
+    var passwordVisible by remember { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         PremiumTextField(
             value = name,
             onValueChange = viewModel::onNameChange,
             label = "Full Name",
-            icon = Icons.Rounded.Person
+            icon = Icons.Rounded.Person,
+            placeholder = "Enter your full name",
+            error = nameError
         )
 
         PremiumTextField(
             value = email,
             onValueChange = viewModel::onEmailChange,
             label = "Email Address",
-            icon = Icons.Rounded.Email
+            icon = Icons.Rounded.Email,
+            placeholder = "example@domain.com",
+            error = emailError
         )
 
         PremiumTextField(
@@ -337,7 +378,11 @@ fun RegisterForm(
             onValueChange = viewModel::onPasswordChange,
             label = "Password",
             icon = Icons.Rounded.Lock,
-            isPassword = true
+            isPassword = true,
+            passwordVisible = passwordVisible,
+            onPasswordToggle = { passwordVisible = !passwordVisible },
+            placeholder = "••••••••",
+            error = passwordError
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -374,41 +419,84 @@ fun PremiumTextField(
     placeholder: String = "",
     isPassword: Boolean = false,
     passwordVisible: Boolean = false,
-    onPasswordToggle: () -> Unit = {}
+    onPasswordToggle: () -> Unit = {},
+    error: String? = null
 ) {
     Column {
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,
-            color = OnSurfaceVariantLight,
+            color = if (error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
         )
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            placeholder = { Text(placeholder, color = Color.LightGray) },
-            leadingIcon = { Icon(icon, null, tint = PrimarySage, modifier = Modifier.size(20.dp)) },
+            placeholder = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
+            leadingIcon = { 
+                Icon(
+                    imageVector = icon, 
+                    contentDescription = null, 
+                    tint = if (error != null) MaterialTheme.colorScheme.error else PrimarySage, 
+                    modifier = Modifier.size(20.dp)
+                ) 
+            },
             trailingIcon = if (isPassword) {
                 {
                     IconButton(onClick = onPasswordToggle) {
                         Icon(
-                            if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                            null,
-                            tint = Color.Gray
+                            imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                            contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                            tint = if (error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
+            } else if (error != null) {
+                { Icon(Icons.Rounded.Error, null, tint = MaterialTheme.colorScheme.error) }
             } else null,
+            isError = error != null,
             visualTransformation = if (isPassword && !passwordVisible) PasswordVisualTransformation() else VisualTransformation.None,
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = PrimarySage,
-                unfocusedBorderColor = OutlineLight,
-                focusedContainerColor = Color.White,
-                unfocusedContainerColor = Color.White
-            )
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                errorBorderColor = MaterialTheme.colorScheme.error,
+                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                errorContainerColor = MaterialTheme.colorScheme.surface,
+                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                errorTextColor = MaterialTheme.colorScheme.onSurface,
+                focusedLabelColor = MaterialTheme.colorScheme.primary,
+                unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                errorLabelColor = MaterialTheme.colorScheme.error
+            ),
+            singleLine = true,
+            keyboardOptions = if (isPassword) {
+                androidx.compose.foundation.text.KeyboardOptions(
+                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Password,
+                    imeAction = androidx.compose.ui.text.input.ImeAction.Done
+                )
+            } else if (label.contains("Email", ignoreCase = true)) {
+                androidx.compose.foundation.text.KeyboardOptions(
+                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Email,
+                    imeAction = androidx.compose.ui.text.input.ImeAction.Next
+                )
+            } else {
+                androidx.compose.foundation.text.KeyboardOptions(
+                    imeAction = androidx.compose.ui.text.input.ImeAction.Next
+                )
+            }
         )
+        if (error != null) {
+            Text(
+                text = error,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(start = 4.dp, top = 4.dp)
+            )
+        }
     }
 }
 
@@ -421,19 +509,29 @@ fun SocialButton(
     Surface(
         modifier = modifier
             .height(56.dp)
-            .border(1.dp, SocialButtonBorder, RoundedCornerShape(16.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
             .clip(RoundedCornerShape(16.dp))
             .clickable { },
-        color = Color.White
+        color = MaterialTheme.colorScheme.surface
     ) {
         Row(
             modifier = Modifier.fillMaxSize(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
-            Icon(icon, null, modifier = Modifier.size(24.dp))
+            Icon(
+                imageVector = icon, 
+                contentDescription = null, 
+                modifier = Modifier.size(24.dp),
+                tint = MaterialTheme.colorScheme.onSurface
+            )
             Spacer(modifier = Modifier.width(8.dp))
-            Text(text, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = text, 
+                fontWeight = FontWeight.Bold, 
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
         }
     }
 }

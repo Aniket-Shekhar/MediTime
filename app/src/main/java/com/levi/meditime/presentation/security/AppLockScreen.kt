@@ -132,7 +132,9 @@ fun AppLockScreen(
             }
 
             if (pinError != null && !showPinDialog) {
-                Text(pinError!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelSmall)
+                pinError?.let {
+                    Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelSmall)
+                }
             }
         }
 
@@ -185,7 +187,9 @@ fun PinEntryDialog(
                     singleLine = true
                 )
                 if (error != null) {
-                    Text(error!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 8.dp))
+                    error?.let {
+                        Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 8.dp))
+                    }
                 }
             }
         },

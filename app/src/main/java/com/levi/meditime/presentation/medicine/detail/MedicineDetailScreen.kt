@@ -94,7 +94,7 @@ fun MedicineDetailScreen(
 
                     DetailInfoCardWide(
                         label = stringResource(R.string.instructions), 
-                        value = if (med.notes.isNullOrBlank()) stringResource(R.string.no_special_instructions) else med.notes!!, 
+                        value = if (med.notes.isNullOrBlank()) stringResource(R.string.no_special_instructions) else med.notes, 
                         icon = Icons.Rounded.Description
                     )
 

@@ -57,12 +57,12 @@ class EmailVerificationViewModel @Inject constructor(
         }
     }
 
-    fun sendEmailOtp(email: String) {
+    fun sendEmailVerification() {
         viewModelScope.launch {
             _isLoading.value = true
-            when (val result = authRepository.sendEmailOtp(email)) {
+            when (val result = authRepository.sendEmailVerification()) {
                 is Resource.Success -> {
-                    _message.value = "OTP sent to $email"
+                    _message.value = "Verification email sent. Please check your inbox."
                     startTimer()
                 }
                 is Resource.Error -> _error.value = result.message
@@ -72,13 +72,17 @@ class EmailVerificationViewModel @Inject constructor(
         }
     }
 
-    fun verifyEmailOtp(email: String) {
-        if (_otp.value.length != 6) return
-        
+    fun checkVerificationStatus() {
         viewModelScope.launch {
             _isLoading.value = true
-            when (val result = authRepository.verifyEmailOtp(email, _otp.value)) {
-                is Resource.Success -> _isVerified.value = true
+            when (val result = authRepository.reloadUser()) {
+                is Resource.Success -> {
+                    if (authRepository.isEmailVerified()) {
+                        _isVerified.value = true
+                    } else {
+                        _error.value = "Email not verified yet. Please check your email."
+                    }
+                }
                 is Resource.Error -> _error.value = result.message
                 else -> {}
             }
@@ -89,7 +93,7 @@ class EmailVerificationViewModel @Inject constructor(
     private fun startTimer() {
         timerJob?.cancel()
         _canResend.value = false
-        _timer.value = 40
+        _timer.value = 60 // PRD: 60s cooldown
         timerJob = viewModelScope.launch {
             while (_timer.value > 0) {
                 delay(1000)

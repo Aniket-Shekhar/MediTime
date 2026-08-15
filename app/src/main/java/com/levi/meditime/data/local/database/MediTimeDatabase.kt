@@ -31,7 +31,7 @@ import com.levi.meditime.data.local.entity.UserProfileEntity
         AppointmentEntity::class,
         UserProfileEntity::class
     ],
-    version = 13,
+    version = 14,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -39,6 +39,18 @@ abstract class MediTimeDatabase : RoomDatabase() {
     abstract fun medicineDao(): MedicineDao
 
     companion object {
+        val MIGRATION_13_14 = object : androidx.room.migration.Migration(13, 14) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                // Add missing security fields to users table
+                db.execSQL("ALTER TABLE users ADD COLUMN emailVerified INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE users ADD COLUMN phoneVerified INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE users ADD COLUMN failedOtpAttempts INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE users ADD COLUMN otpLockedUntil INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE users ADD COLUMN lastOtpSentAt INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE users ADD COLUMN hourlyOtpCount INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         val MIGRATION_12_13 = object : androidx.room.migration.Migration(12, 13) {
             override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE symptoms ADD COLUMN familyMemberId TEXT")

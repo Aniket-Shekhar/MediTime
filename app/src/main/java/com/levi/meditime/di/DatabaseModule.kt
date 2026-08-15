@@ -46,7 +46,8 @@ object DatabaseModule {
             .addMigrations(
                 MediTimeDatabase.MIGRATION_10_11, 
                 MediTimeDatabase.MIGRATION_11_12,
-                MediTimeDatabase.MIGRATION_12_13
+                MediTimeDatabase.MIGRATION_12_13,
+                MediTimeDatabase.MIGRATION_13_14
             )
             .fallbackToDestructiveMigration(true)
             .build()

@@ -59,14 +59,26 @@ class DashboardViewModel @Inject constructor(
     val state: StateFlow<DashboardState> = _state.asStateFlow()
 
     init {
+        android.util.Log.d("DashboardVM", "Initializing DashboardViewModel (v3.1)")
         observeUser()
         loadDashboardData()
+        android.util.Log.d("DashboardVM", "Initialization commands sent.")
     }
 
     private fun observeUser() {
         viewModelScope.launch {
-            authRepository.currentUser.collectLatest { user ->
-                _state.update { it.copy(userName = user?.name?.split(" ")?.firstOrNull() ?: "User") }
+            try {
+                authRepository.currentUser.collectLatest { user ->
+                    if (user != null) {
+                        android.util.Log.d("DashboardVM", "User received: ${user.uid}")
+                        _state.update { it.copy(userName = user.name.split(" ").firstOrNull() ?: "User") }
+                    } else {
+                        android.util.Log.d("DashboardVM", "User is null, resetting name")
+                        _state.update { it.copy(userName = "User") }
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("DashboardVM", "Error in observeUser: ${e.message}")
             }
         }
     }
@@ -74,40 +86,45 @@ class DashboardViewModel @Inject constructor(
     private fun loadDashboardData() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
+            android.util.Log.d("DashboardVM", "Loading dashboard data...")
             
-            val calendar = Calendar.getInstance()
-            calendar.set(Calendar.HOUR_OF_DAY, 0)
-            calendar.set(Calendar.MINUTE, 0)
-            calendar.set(Calendar.SECOND, 0)
-            val startOfDay = calendar.timeInMillis
-            
-            calendar.set(Calendar.HOUR_OF_DAY, 23)
-            calendar.set(Calendar.MINUTE, 59)
-            calendar.set(Calendar.SECOND, 59)
-            val endOfDay = calendar.timeInMillis
+            try {
+                val calendar = Calendar.getInstance()
+                calendar.set(Calendar.HOUR_OF_DAY, 0)
+                calendar.set(Calendar.MINUTE, 0)
+                calendar.set(Calendar.SECOND, 0)
+                val startOfDay = calendar.timeInMillis
+                
+                calendar.set(Calendar.HOUR_OF_DAY, 23)
+                calendar.set(Calendar.MINUTE, 59)
+                calendar.set(Calendar.SECOND, 59)
+                val endOfDay = calendar.timeInMillis
 
-            combine(
-                medicineRepository.getAllMedicines().distinctUntilChanged(),
-                medicineRepository.getHistoryForPeriod(startOfDay, endOfDay).distinctUntilChanged()
-            ) { medicines, history ->
-                val takenCount = history.count { it.status == DoseStatus.TAKEN }
-                val skippedCount = history.count { it.status == DoseStatus.SKIPPED }
-                
-                // Real logic: In a real app, we'd count reminders scheduled for today
-                // For now, let's assume total = taken + skipped + upcoming (mocked as medicines.size)
-                val upcomingCount = medicines.size // Simplification for now
-                val total = takenCount + skippedCount + upcomingCount
-                
-                _state.update { 
-                    it.copy(
-                        medicines = medicines,
-                        totalDosesToday = total,
-                        completedDosesToday = takenCount,
-                        nextDoseTime = calculateNextDoseTime(medicines),
-                        isLoading = false
-                    )
-                }
-            }.collect()
+                combine(
+                    medicineRepository.getAllMedicines().distinctUntilChanged(),
+                    medicineRepository.getHistoryForPeriod(startOfDay, endOfDay).distinctUntilChanged()
+                ) { medicines, history ->
+                    android.util.Log.d("DashboardVM", "Data combined. Meds: ${medicines.size}, History: ${history.size}")
+                    val takenCount = history.count { it.status == DoseStatus.TAKEN }
+                    val skippedCount = history.count { it.status == DoseStatus.SKIPPED }
+                    
+                    val upcomingCount = medicines.size
+                    val total = takenCount + skippedCount + upcomingCount
+                    
+                    _state.update { 
+                        it.copy(
+                            medicines = medicines,
+                            totalDosesToday = total,
+                            completedDosesToday = takenCount,
+                            nextDoseTime = calculateNextDoseTime(medicines),
+                            isLoading = false
+                        )
+                    }
+                }.collect()
+            } catch (e: Exception) {
+                android.util.Log.e("DashboardVM", "Error in loadDashboardData: ${e.message}")
+                _state.update { it.copy(isLoading = false) }
+            }
         }
     }
 

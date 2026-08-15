@@ -100,16 +100,17 @@ fun CaretakerListScreen(
     }
 
     if (state.showOtpDialog && pendingCaretakerData != null) {
+        val data = pendingCaretakerData ?: emptyMap()
         SensitiveActionOtpDialog(
             type = OtpType.LINK_CARETAKER,
             onDismiss = viewModel::dismissOtpDialog,
             onVerify = { otp ->
                 viewModel.verifyOtpAndAddCaretaker(
                     otp = otp,
-                    name = pendingCaretakerData!!["name"]!!,
-                    relation = pendingCaretakerData!!["relation"]!!,
-                    email = pendingCaretakerData!!["email"]!!,
-                    phone = pendingCaretakerData!!["phone"]!!
+                    name = data["name"] ?: "",
+                    relation = data["relation"] ?: "",
+                    email = data["email"] ?: "",
+                    phone = data["phone"] ?: ""
                 ) {
                     pendingCaretakerData = null
                 }
@@ -255,6 +256,14 @@ fun AddCaretakerBottomSheet(
         }
     )
 
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            contactPickerLauncher.launch(null)
+        }
+    }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
@@ -268,7 +277,14 @@ fun AddCaretakerBottomSheet(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.add_caretaker), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
-                TextButton(onClick = { contactPickerLauncher.launch(null) }) {
+                TextButton(onClick = { 
+                    val status = androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.READ_CONTACTS)
+                    if (status == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                        contactPickerLauncher.launch(null)
+                    } else {
+                        permissionLauncher.launch(android.Manifest.permission.READ_CONTACTS)
+                    }
+                }) {
                     Icon(Icons.Default.Person, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(R.string.from_contacts))

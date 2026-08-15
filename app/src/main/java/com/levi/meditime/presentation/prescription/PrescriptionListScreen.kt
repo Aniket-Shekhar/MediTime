@@ -179,10 +179,13 @@ fun PrescriptionListScreen(
     }
 
     if (showAddDialog && selectedUri != null) {
+        val uri = selectedUri
         AddPrescriptionBottomSheet(
             onDismiss = { showAddDialog = false },
             onSave = { doctor, hospital ->
-                viewModel.uploadPrescription(selectedUri!!, doctor, hospital, selectedFileType)
+                if (uri != null) {
+                    viewModel.uploadPrescription(uri, doctor, hospital, selectedFileType)
+                }
                 showAddDialog = false
             }
         )

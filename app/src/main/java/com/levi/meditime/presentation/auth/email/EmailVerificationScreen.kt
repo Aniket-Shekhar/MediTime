@@ -94,7 +94,7 @@ fun EmailVerificationScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "Enter the 6-digit code sent to:",
+                    text = "A verification link has been sent to:",
                     style = MaterialTheme.typography.bodySmall,
                     color = OnSurfaceVariantLight,
                     textAlign = TextAlign.Center
@@ -108,65 +108,50 @@ fun EmailVerificationScreen(
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // Using centered text style for OTP
-                OutlinedTextField(
-                    value = otp,
-                    onValueChange = viewModel::onOtpChange,
-                    modifier = Modifier.fillMaxWidth(),
-                    textStyle = MaterialTheme.typography.headlineSmall.copy(
-                        textAlign = TextAlign.Center,
-                        letterSpacing = 8.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = OnSurfaceLight
-                    ),
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
-                    ),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = PrimarySage,
-                        unfocusedBorderColor = OutlineLight,
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White
-                    ),
-                    singleLine = true
+                Text(
+                    text = "Please check your inbox (and spam folder) and click the link to verify your account.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = OnSurfaceLight,
+                    textAlign = TextAlign.Center
                 )
 
                 if (error != null) {
-                    Text(
-                        text = error!!,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
+                    error?.let {
+                        Text(
+                            text = it,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(32.dp))
 
                 Button(
-                    onClick = { viewModel.verifyEmailOtp(email) },
+                    onClick = { viewModel.checkVerificationStatus() },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(54.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = PrimarySage),
                     shape = RoundedCornerShape(16.dp),
-                    enabled = otp.length == 6 && !isLoading
+                    enabled = !isLoading
                 ) {
                     if (isLoading) {
                         CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
                     } else {
-                        Text("Verify", fontWeight = FontWeight.Bold)
+                        Text("I Have Verified", fontWeight = FontWeight.Bold)
                     }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 TextButton(
-                    onClick = { viewModel.sendEmailOtp(email) },
+                    onClick = { viewModel.sendEmailVerification() },
                     enabled = canResend
                 ) {
                     Text(
-                        if (canResend) "Resend OTP" else "Resend in ${timer}s",
+                        if (canResend) "Resend Verification Email" else "Resend in ${timer}s",
                         fontWeight = FontWeight.Bold,
                         color = if (canResend) PrimarySage else OnSurfaceVariantLight
                     )

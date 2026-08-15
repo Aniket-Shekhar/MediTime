@@ -36,7 +36,8 @@ data class UserSettings(
     val snoozeDurationMinutes: Int = 10,
     val missedReminderAlertEnabled: Boolean = true,
     val isOnboardingCompleted: Boolean = false,
-    val notifBannerDismissed: Boolean = false
+    val notifBannerDismissed: Boolean = false,
+    val rememberMe: Boolean = false
 )
 
 @Singleton
@@ -65,31 +66,53 @@ class ThemePreferences @Inject constructor(
         private val MISSED_ALERTS_KEY = booleanPreferencesKey("missed_alerts_enabled")
         private val ONBOARDING_COMPLETED_KEY = booleanPreferencesKey("onboarding_completed")
         private val NOTIF_BANNER_DISMISSED_KEY = booleanPreferencesKey("notif_banner_dismissed")
+        private val REMEMBER_ME_KEY = booleanPreferencesKey("remember_me")
     }
 
     val userSettings: Flow<UserSettings> = context.dataStore.data.map { preferences ->
-        UserSettings(
-            themeMode = ThemeMode.valueOf(preferences[THEME_KEY] ?: ThemeMode.SYSTEM.name),
-            remindersEnabled = preferences[REMINDERS_KEY] ?: true,
-            vibrationEnabled = preferences[VIBRATION_KEY] ?: true,
-            lowStockNotificationsEnabled = preferences[LOW_STOCK_KEY] ?: true,
-            familyNotificationsEnabled = preferences[FAMILY_NOTIF_KEY] ?: true,
-            missedReminderDelayMinutes = (preferences[MISSED_DELAY_KEY] ?: "15").toInt(),
-            autoCallEmergencyEnabled = preferences[AUTO_CALL_KEY] ?: false,
-            accessibilityMode = preferences[ACCESSIBILITY_KEY] ?: false,
-            language = preferences[LANGUAGE_KEY] ?: "en",
-            voiceAlarmEnabled = preferences[VOICE_ALARM_KEY] ?: true,
-            voiceType = preferences[VOICE_TYPE_KEY] ?: "Female",
-            voiceVolume = preferences[VOICE_VOLUME_KEY] ?: 1.0f,
-            appLockEnabled = preferences[APP_LOCK_KEY] ?: false,
-            appPin = preferences[APP_PIN_KEY],
-            allowScreenshots = preferences[SCREENSHOT_BLOCK_KEY] ?: true,
-            reminderSound = preferences[REMINDER_SOUND_KEY] ?: "Default",
-            snoozeDurationMinutes = preferences[SNOOZE_DURATION_KEY] ?: 10,
-            missedReminderAlertEnabled = preferences[MISSED_ALERTS_KEY] ?: true,
-            isOnboardingCompleted = preferences[ONBOARDING_COMPLETED_KEY] ?: false,
-            notifBannerDismissed = preferences[NOTIF_BANNER_DISMISSED_KEY] ?: false
-        )
+        try {
+            UserSettings(
+                themeMode = try {
+                    ThemeMode.valueOf(preferences[THEME_KEY] ?: ThemeMode.SYSTEM.name)
+                } catch (e: Exception) {
+                    ThemeMode.SYSTEM
+                },
+                remindersEnabled = preferences[REMINDERS_KEY] ?: true,
+                vibrationEnabled = preferences[VIBRATION_KEY] ?: true,
+                lowStockNotificationsEnabled = preferences[LOW_STOCK_KEY] ?: true,
+                familyNotificationsEnabled = preferences[FAMILY_NOTIF_KEY] ?: true,
+                missedReminderDelayMinutes = try {
+                    (preferences[MISSED_DELAY_KEY] ?: "15").toInt()
+                } catch (e: Exception) {
+                    15
+                },
+                autoCallEmergencyEnabled = preferences[AUTO_CALL_KEY] ?: false,
+                accessibilityMode = preferences[ACCESSIBILITY_KEY] ?: false,
+                language = preferences[LANGUAGE_KEY] ?: "en",
+                voiceAlarmEnabled = preferences[VOICE_ALARM_KEY] ?: true,
+                voiceType = preferences[VOICE_TYPE_KEY] ?: "Female",
+                voiceVolume = preferences[VOICE_VOLUME_KEY] ?: 1.0f,
+                appLockEnabled = preferences[APP_LOCK_KEY] ?: false,
+                appPin = preferences[APP_PIN_KEY],
+                allowScreenshots = preferences[SCREENSHOT_BLOCK_KEY] ?: true,
+                reminderSound = preferences[REMINDER_SOUND_KEY] ?: "Default",
+                snoozeDurationMinutes = preferences[SNOOZE_DURATION_KEY] ?: 10,
+                missedReminderAlertEnabled = preferences[MISSED_ALERTS_KEY] ?: true,
+                isOnboardingCompleted = preferences[ONBOARDING_COMPLETED_KEY] ?: false,
+                notifBannerDismissed = preferences[NOTIF_BANNER_DISMISSED_KEY] ?: false,
+                rememberMe = preferences[REMEMBER_ME_KEY] ?: false
+            )
+        } catch (e: Exception) {
+            // Ultimate fallback for corrupted DataStore
+            android.util.Log.e("ThemePreferences", "Failed to parse settings, using defaults: ${e.message}")
+            UserSettings(
+                themeMode = ThemeMode.SYSTEM,
+                remindersEnabled = true,
+                vibrationEnabled = true,
+                lowStockNotificationsEnabled = true,
+                familyNotificationsEnabled = true
+            )
+        }
     }
 
     val themeMode: Flow<ThemeMode> = userSettings.map { it.themeMode }
@@ -98,6 +121,10 @@ class ThemePreferences @Inject constructor(
         context.dataStore.edit { preferences ->
             preferences[THEME_KEY] = mode.name
         }
+    }
+
+    suspend fun setRememberMe(enabled: Boolean) {
+        context.dataStore.edit { it[REMEMBER_ME_KEY] = enabled }
     }
 
     suspend fun setOnboardingCompleted(completed: Boolean) {

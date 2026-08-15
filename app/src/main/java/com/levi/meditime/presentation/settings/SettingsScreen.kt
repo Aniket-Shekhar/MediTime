@@ -197,6 +197,7 @@ fun SettingsScreen(
                     }
 
                     // Support Group
+                    val context = androidx.compose.ui.platform.LocalContext.current
                     SettingsGroupMinimal(title = "Support") {
                         SettingsItem(
                             icon = Icons.Rounded.Info,
@@ -206,18 +207,13 @@ fun SettingsScreen(
                         SettingsItem(
                             icon = Icons.Rounded.HelpOutline,
                             title = "Help Center",
-                            onClick = {}
+                            onClick = {
+                                android.widget.Toast.makeText(context, "Help Center is coming soon.", android.widget.Toast.LENGTH_SHORT).show()
+                            }
                         )
                     }
                     
                     Spacer(Modifier.height(32.dp))
-                    
-                    SecondaryButton(
-                        text = "Logout", 
-                        onClick = { /* Logout handled in Account */ },
-                        modifier = Modifier.padding(horizontal = 24.dp),
-                        icon = Icons.AutoMirrored.Rounded.Logout
-                    )
                 }
             }
         }

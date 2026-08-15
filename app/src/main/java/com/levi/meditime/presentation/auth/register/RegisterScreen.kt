@@ -8,6 +8,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -36,10 +38,11 @@ fun RegisterScreen(
     val name by viewModel.name.collectAsState()
     val email by viewModel.email.collectAsState()
     val password by viewModel.password.collectAsState()
-    val age by viewModel.age.collectAsState()
-    val gender by viewModel.gender.collectAsState()
-    val emergencyContact by viewModel.emergencyContact.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+
+    val nameError by viewModel.nameError.collectAsState()
+    val emailError by viewModel.emailError.collectAsState()
+    val passwordError by viewModel.passwordError.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -118,14 +121,16 @@ fun RegisterScreen(
                             value = name,
                             onValueChange = viewModel::onNameChange,
                             label = "Full Name",
-                            icon = Icons.Rounded.Person
+                            icon = Icons.Rounded.Person,
+                            error = nameError
                         )
                         
                         RegisterTextField(
                             value = email,
                             onValueChange = viewModel::onEmailChange,
                             label = "Email Address",
-                            icon = Icons.Rounded.Email
+                            icon = Icons.Rounded.Email,
+                            error = emailError
                         )
                         
                         RegisterTextField(
@@ -133,31 +138,8 @@ fun RegisterScreen(
                             onValueChange = viewModel::onPasswordChange,
                             label = "Password",
                             icon = Icons.Rounded.Lock,
-                            isPassword = true
-                        )
-                        
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            RegisterTextField(
-                                value = age,
-                                onValueChange = viewModel::onAgeChange,
-                                label = "Age",
-                                icon = Icons.Rounded.CalendarToday,
-                                modifier = Modifier.weight(1f)
-                            )
-                            RegisterTextField(
-                                value = gender,
-                                onValueChange = viewModel::onGenderChange,
-                                label = "Gender",
-                                icon = Icons.Rounded.Transgender,
-                                modifier = Modifier.weight(1.2f)
-                            )
-                        }
-                        
-                        RegisterTextField(
-                            value = emergencyContact,
-                            onValueChange = viewModel::onEmergencyContactChange,
-                            label = "Emergency Contact",
-                            icon = Icons.Rounded.ContactPhone
+                            isPassword = true,
+                            error = passwordError
                         )
                         
                         Spacer(modifier = Modifier.height(16.dp))
@@ -219,24 +201,48 @@ fun RegisterTextField(
     label: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     modifier: Modifier = Modifier,
-    isPassword: Boolean = false
+    isPassword: Boolean = false,
+    error: String? = null
 ) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text(label) },
-        leadingIcon = { Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp)) },
-        visualTransformation = if (isPassword) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-            focusedContainerColor = MaterialTheme.colorScheme.surface,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surface
-        ),
-        singleLine = true
-    )
+    var passwordVisible by remember { mutableStateOf(false) }
+
+    Column(modifier = modifier) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            label = { Text(label) },
+            leadingIcon = { Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp)) },
+            trailingIcon = if (isPassword) {
+                {
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Icon(
+                            if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                            if (passwordVisible) "Hide password" else "Show password"
+                        )
+                    }
+                }
+            } else null,
+            isError = error != null,
+            visualTransformation = if (isPassword && !passwordVisible) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface
+            ),
+            singleLine = true
+        )
+        if (error != null) {
+            Text(
+                text = error,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+            )
+        }
+    }
 }

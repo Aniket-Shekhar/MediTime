@@ -57,33 +57,37 @@ class ReportViewModel @Inject constructor(
     fun exportReport() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
-            
-            val historyFlow = if (memberId != null) repository.getHistoryForMember(memberId) else repository.getAllHistory()
-            val history = historyFlow.first()
-            
-            val medicinesFlow = if (memberId != null) repository.getAllMedicines().map { list -> list.filter { it.familyMemberId == memberId } } else repository.getAllMedicines()
-            val medicines = medicinesFlow.first()
+            try {
+                val historyFlow = if (memberId != null) repository.getHistoryForMember(memberId) else repository.getAllHistory()
+                val history = historyFlow.first()
+                
+                val medicinesFlow = if (memberId != null) repository.getAllMedicines().map { list -> list.filter { it.familyMemberId == memberId } } else repository.getAllMedicines()
+                val medicines = medicinesFlow.first()
 
-            val user = if (memberId != null) {
-                repository.getAllFamilyMembers().first().find { it.id == memberId }?.name ?: "Family Member"
-            } else {
-                authRepository.currentUser.first()?.name ?: "User"
-            }
-            
-            val file = pdfManager.generateFullReport(
-                userName = user,
-                adherence = _state.value.adherence,
-                history = history,
-                medicines = medicines,
-                fileName = "MediTime_Report_${if (memberId != null) "Member_" else ""}${System.currentTimeMillis()}"
-            )
-            
-            _state.update { 
-                it.copy(
-                    isLoading = false,
-                    reportFile = file,
-                    message = if (file != null) "Report exported to Downloads/MediTime" else "Failed to export report"
+                val user = if (memberId != null) {
+                    repository.getAllFamilyMembers().first().find { it.id == memberId }?.name ?: "Family Member"
+                } else {
+                    authRepository.currentUser.first()?.name ?: "User"
+                }
+                
+                val file = pdfManager.generateFullReport(
+                    userName = user,
+                    adherence = _state.value.adherence,
+                    history = history,
+                    medicines = medicines,
+                    fileName = "MediTime_Report_${if (memberId != null) "Member_" else ""}${System.currentTimeMillis()}"
                 )
+                
+                _state.update { 
+                    it.copy(
+                        isLoading = false,
+                        reportFile = file,
+                        message = if (file != null) "Report exported to Downloads/MediTime" else "Failed to export report"
+                    )
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("ReportVM", "Export failed: ${e.message}")
+                _state.update { it.copy(isLoading = false, message = "Export failed. Please try again.") }
             }
         }
     }
@@ -95,25 +99,29 @@ class ReportViewModel @Inject constructor(
     private fun loadReportData() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
-            
-            val historyFlow = if (memberId != null) repository.getHistoryForMember(memberId) else repository.getAllHistory()
-            
-            historyFlow.distinctUntilChanged().collectLatest { history ->
-                val taken = history.count { it.status == DoseStatus.TAKEN }
-                val missed = history.count { it.status == DoseStatus.MISSED }
-                val total = history.size
+            try {
+                val historyFlow = if (memberId != null) repository.getHistoryForMember(memberId) else repository.getAllHistory()
                 
-                _state.update { 
-                    it.copy(
-                        adherence = if (total > 0) (taken * 100) / total else 0,
-                        takenCount = taken,
-                        missedCount = missed,
-                        refillCount = if (memberId != null) 0 else 2, // Placeholder
-                        streak = calculateStreak(history),
-                        chartPoints = calculateChartPoints(history, it.selectedPeriod),
-                        isLoading = false
-                    )
+                historyFlow.distinctUntilChanged().collectLatest { history ->
+                    val taken = history.count { it.status == DoseStatus.TAKEN }
+                    val missed = history.count { it.status == DoseStatus.MISSED }
+                    val total = history.size
+                    
+                    _state.update { 
+                        it.copy(
+                            adherence = if (total > 0) (taken * 100) / total else 0,
+                            takenCount = taken,
+                            missedCount = missed,
+                            refillCount = if (memberId != null) 0 else 2, // Placeholder
+                            streak = calculateStreak(history),
+                            chartPoints = calculateChartPoints(history, it.selectedPeriod),
+                            isLoading = false
+                        )
+                    }
                 }
+            } catch (e: Exception) {
+                android.util.Log.e("ReportVM", "Load failed: ${e.message}")
+                _state.update { it.copy(isLoading = false) }
             }
         }
     }

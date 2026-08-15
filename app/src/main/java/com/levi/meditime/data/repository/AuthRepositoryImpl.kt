@@ -48,14 +48,24 @@ class AuthRepositoryImpl @Inject constructor(
             if (firebaseUser == null) {
                 trySend(null)
             } else {
-                val user = User(
-                    uid = firebaseUser.uid,
-                    email = firebaseUser.email ?: "",
-                    name = firebaseUser.displayName ?: "",
-                    emailVerified = firebaseUser.isEmailVerified,
-                    phoneVerified = !firebaseUser.phoneNumber.isNullOrEmpty()
-                )
-                trySend(user)
+                try {
+                    val user = User(
+                        uid = firebaseUser.uid,
+                        email = firebaseUser.email ?: "",
+                        name = firebaseUser.displayName ?: "",
+                        emailVerified = firebaseUser.isEmailVerified,
+                        phoneVerified = !firebaseUser.phoneNumber.isNullOrEmpty()
+                    )
+                    trySend(user)
+                } catch (e: Exception) {
+                    Log.e("AUTH_AUDIT", "Error mapping FirebaseUser to Domain User: ${e.message}")
+                    // Fallback to named constructor to avoid positional mismatch
+                    trySend(User(
+                        uid = firebaseUser.uid, 
+                        email = firebaseUser.email ?: "",
+                        name = firebaseUser.displayName ?: ""
+                    ))
+                }
             }
         }
         auth.addAuthStateListener(listener)
@@ -64,17 +74,34 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun register(email: String, pass: String): Resource<String> {
         return try {
-            val result = auth.createUserWithEmailAndPassword(email, pass).await()
-            val uid = result.user?.uid ?: ""
-            if (uid.isNotEmpty()) {
-                val now = System.currentTimeMillis()
-                dbRef.child("users").child(uid).child("security").updateChildren(mapOf(
-                    "lastLoginTimestamp" to now,
-                    "revocationTimestamp" to 0
-                )).await()
+            kotlinx.coroutines.withTimeout(15000L) {
+                val result = auth.createUserWithEmailAndPassword(email, pass).await()
+                val uid = result.user?.uid ?: ""
+                if (uid.isNotEmpty()) {
+                    val now = System.currentTimeMillis()
+                    // RTDB for security metadata
+                    dbRef.child("users").child(uid).child("security").updateChildren(mapOf(
+                        "lastLoginTimestamp" to now,
+                        "revocationTimestamp" to 0
+                    )).await()
+                    
+                    // Firestore for primary profile
+                    val initialProfile = mapOf(
+                        "uid" to uid,
+                        "email" to email,
+                        "name" to (result.user?.displayName ?: ""),
+                        "createdAt" to now,
+                        "updatedAt" to now,
+                        "emailVerified" to false,
+                        "phoneVerified" to false
+                    )
+                    firestore.collection("users").document(uid).set(initialProfile).await()
+                }
+                auditLogManager.logEvent(AuditLogManager.ACTION_REGISTER, uid)
+                Resource.Success(uid)
             }
-            auditLogManager.logEvent(AuditLogManager.ACTION_REGISTER, uid)
-            Resource.Success(uid)
+        } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+            Resource.Error("Registration timed out. Please check your connection.")
         } catch (e: Exception) {
             FirebaseCrashlytics.getInstance().recordException(
                 Exception(SecurityUtils.scrubPii(e.message), e)
@@ -85,13 +112,33 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun login(email: String, pass: String): Resource<String> {
         return try {
-            val result = auth.signInWithEmailAndPassword(email, pass).await()
-            val uid = result.user?.uid ?: ""
-            if (uid.isNotEmpty()) {
-                dbRef.child("users").child(uid).child("security").child("lastLoginTimestamp").setValue(System.currentTimeMillis()).await()
-                auditLogManager.logEvent(AuditLogManager.ACTION_LOGIN, uid)
+            kotlinx.coroutines.withTimeout(15000L) {
+                val result = auth.signInWithEmailAndPassword(email, pass).await()
+                val uid = result.user?.uid ?: ""
+                if (uid.isNotEmpty()) {
+                    val now = System.currentTimeMillis()
+                    dbRef.child("users").child(uid).child("security").child("lastLoginTimestamp").setValue(now).await()
+                    
+                    // Ensure Firestore profile exists (Recovery)
+                    val doc = firestore.collection("users").document(uid).get().await()
+                    if (!doc.exists()) {
+                        val recoveryProfile = mapOf(
+                            "uid" to uid,
+                            "email" to email,
+                            "name" to (result.user?.displayName ?: ""),
+                            "createdAt" to now,
+                            "updatedAt" to now,
+                            "emailVerified" to (result.user?.isEmailVerified ?: false)
+                        )
+                        firestore.collection("users").document(uid).set(recoveryProfile).await()
+                    }
+                    
+                    auditLogManager.logEvent(AuditLogManager.ACTION_LOGIN, uid)
+                }
+                Resource.Success(uid)
             }
-            Resource.Success(uid)
+        } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+            Resource.Error("Login timed out. Please check your connection.")
         } catch (e: Exception) {
             FirebaseCrashlytics.getInstance().recordException(
                 Exception(SecurityUtils.scrubPii(e.message), e)
@@ -252,7 +299,11 @@ class AuthRepositoryImpl @Inject constructor(
                     CoroutineScope(Dispatchers.IO).launch {
                         try {
                             val snapshot = profileRef.get().await()
-                            val count = (snapshot.child("phoneResendCount").getValue(Int::class.java) ?: 0) + 1
+                            val count = try {
+                                snapshot.child("phoneResendCount").getValue(Int::class.java) ?: 0
+                            } catch (e: Exception) {
+                                snapshot.child("phoneResendCount").value?.toString()?.toIntOrNull() ?: 0
+                            } + 1
                             profileRef.updateChildren(mapOf(
                                 "phoneResendCount" to count, 
                                 "lastPhoneOtpSent" to System.currentTimeMillis(),

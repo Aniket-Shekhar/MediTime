@@ -59,6 +59,9 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
     lateinit var themePreferences: ThemePreferences
 
     @Inject
+    lateinit var database: dagger.Lazy<com.levi.meditime.data.local.database.MediTimeDatabase>
+
+    @Inject
     lateinit var screenshotSecurityManager: com.levi.meditime.manager.ScreenshotSecurityManager
 
     @Inject
@@ -78,9 +81,26 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
             val user by authRepository.currentUser.collectAsState(initial = null)
             
             LaunchedEffect(Unit) {
-                // Wait for the first emission from the auth flow to prevent startup race
-                authRepository.currentUser.first()
-                isAuthReady = true
+                val startTime = System.currentTimeMillis()
+                try {
+                    // Part 1: Background Warm-up (Database & Auth)
+                    // Added timeout to prevent hanging on startup
+                    kotlinx.coroutines.withTimeout(5000L) {
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            // Wait for first auth emission
+                            authRepository.currentUser.first()
+                            // Trigger database initialization/migration on background thread
+                            database.get().medicineDao().getMedicinesCount().first()
+                        }
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("MediTime_Startup", "Startup guard failed or timed out: ${e.message}")
+                } finally {
+                    // Part 2: Enforce a minimum branding time (1s) and ensure entry (max 5s)
+                    val elapsedTime = System.currentTimeMillis() - startTime
+                    if (elapsedTime < 1000) kotlinx.coroutines.delay(1000 - elapsedTime)
+                    isAuthReady = true
+                }
             }
 
             val navController = rememberNavController()
@@ -89,7 +109,7 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
             
             // Predictive full-screen logic: check current route OR what we expect to show first
             val isFullScreen = remember(currentRoute, userSettings, user, isAuthReady) {
-                if (!isAuthReady) return@remember true // Default to full screen (splash) while loading
+                if (!isAuthReady) return@remember true
                 
                 val onboardingComplete = userSettings?.isOnboardingCompleted ?: false
                 val route = currentRoute ?: when {
@@ -101,10 +121,18 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
             }
 
             LaunchedEffect(currentLang) {
+                // Smart Locale Sync: Prevents recreation loops
                 val currentAppLocale = androidx.appcompat.app.AppCompatDelegate.getApplicationLocales().toLanguageTags()
-                if (currentAppLocale != currentLang) {
+                
+                // Compare only the language part to be resilient (e.g., "en" vs "en-US")
+                val isSameLanguage = currentAppLocale.startsWith(currentLang) || 
+                                   (currentAppLocale.isEmpty() && currentLang == "en")
+
+                if (!isSameLanguage) {
+                    android.util.Log.d("MediTime_Locale", "Syncing locale: $currentAppLocale -> $currentLang")
                     LocaleHelper.applyLocale(currentLang)
-                    recreate()
+                    // AppCompatDelegate.setApplicationLocales() triggers recreation automatically.
+                    // DO NOT call recreate() here to avoid infinite loops.
                 }
             }
 
@@ -131,15 +159,31 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                             authRepository.ensureTokenPropagation()
 
                             val securityRef = FirebaseDatabase.getInstance().getReference("users").child(uid).child("security")
-                            val snapshot = securityRef.get().await()
+                            val snapshot = try {
+                                securityRef.get().await()
+                            } catch (e: Exception) {
+                                android.util.Log.w("MediTime_Crash", "Failed to fetch security metadata: ${e.message}")
+                                null
+                            }
 
-                            val lastLogin = snapshot.child("lastLoginTimestamp").getValue(Long::class.java) ?: 0L
-                            val revocationTime = snapshot.child("revocationTimestamp").getValue(Long::class.java) ?: 0L
-                            
-                            if (revocationTime > lastLogin) {
-                                authRepository.logout()
-                                navController.navigate(Screen.Login.route) {
-                                    popUpTo(0) { inclusive = true }
+                            if (snapshot != null) {
+                                val lastLogin = try {
+                                    snapshot.child("lastLoginTimestamp").getValue(Long::class.java) ?: 0L
+                                } catch (e: Exception) {
+                                    snapshot.child("lastLoginTimestamp").value?.toString()?.toLongOrNull() ?: 0L
+                                }
+
+                                val revocationTime = try {
+                                    snapshot.child("revocationTimestamp").getValue(Long::class.java) ?: 0L
+                                } catch (e: Exception) {
+                                    snapshot.child("revocationTimestamp").value?.toString()?.toLongOrNull() ?: 0L
+                                }
+                                
+                                if (revocationTime > lastLogin) {
+                                    authRepository.logout()
+                                    navController.navigate(Screen.Login.route) {
+                                        popUpTo(0) { inclusive = true }
+                                    }
                                 }
                             }
                         } catch (e: Exception) {
@@ -199,7 +243,11 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                 DisposableEffect(lifecycleOwner) {
                     val observer = LifecycleEventObserver { _, event ->
                         if (event == Lifecycle.Event.ON_STOP) {
-                            isUnlocked = false
+                            // Only re-lock if the app is actually going to background,
+                            // not if it's just a configuration change (like language or theme).
+                            if (!isChangingConfigurations) {
+                                isUnlocked = false
+                            }
                         }
                     }
                     lifecycleOwner.lifecycle.addObserver(observer)
@@ -317,7 +365,7 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                             } else null
                         }
                     ) { padding ->
-                        if (userSettings == null || !isAuthReady) {
+                        if (!isAuthReady) {
                             // High-quality Loading Splash State
                             Box(
                                 modifier = Modifier

@@ -50,9 +50,9 @@ sealed class Screen(val route: String) {
     }
     
     object OtpVerification : Screen("otp_verification/{phoneNumber}") {
-        fun createRoute(phoneNumber: String) = "otp_verification/$phoneNumber"
+        fun createRoute(phoneNumber: String) = "otp_verification/${android.net.Uri.encode(phoneNumber)}"
     }
     object EmailVerification : Screen("email_verification/{email}") {
-        fun createRoute(email: String) = "email_verification/$email"
+        fun createRoute(email: String) = "email_verification/${android.net.Uri.encode(email)}"
     }
 }

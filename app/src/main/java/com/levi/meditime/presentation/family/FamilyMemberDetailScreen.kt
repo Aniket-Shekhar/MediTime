@@ -180,7 +180,7 @@ fun FamilyMemberDetailScreen(
 
                     Spacer(modifier = Modifier.height(Spacing.card))
                     
-                    SecondaryButton(text = "Manage Permissions", onClick = { /* Deferred */ }, icon = Icons.Rounded.VpnKey)
+                    SecondaryButton(text = "Manage Permissions", onClick = { showComingSoon() }, icon = Icons.Rounded.VpnKey)
                     
                     PrimaryButton(
                         text = "Remove Member", 

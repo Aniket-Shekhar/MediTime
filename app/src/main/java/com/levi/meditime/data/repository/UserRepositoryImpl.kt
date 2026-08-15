@@ -43,6 +43,8 @@ class UserRepositoryImpl @Inject constructor(
     override suspend fun saveUser(user: User): Resource<Unit> {
         return try {
             dao.insertUser(user.toEntity())
+            firestore.collection("users").document(user.uid).set(user).await()
+            // Keep RTDB in sync for legacy or security metadata if needed
             dbRef.child("users").child(user.uid).child("profile").setValue(user).await()
             Resource.Success(Unit)
         } catch (e: Exception) {
@@ -56,24 +58,37 @@ class UserRepositoryImpl @Inject constructor(
     override fun getUser(uid: String): Flow<Resource<User>> = callbackFlow {
         trySend(Resource.Loading())
         
-        // Collect local user
+        // Collect local user first
         val localJob = launch {
             dao.getUserById(uid).collect { entity ->
                 entity?.let { trySend(Resource.Success(it.toDomain())) }
             }
         }
         
-        dbRef.child("users").child(uid).child("profile")
+        firestore.collection("users").document(uid)
             .get()
             .addOnSuccessListener { snapshot ->
-                val user = snapshot.getValue(User::class.java)
+                val user = snapshot.toObject(User::class.java)
                 if (user != null) {
                     launch {
                         dao.insertUser(user.toEntity())
                     }
                     trySend(Resource.Success(user))
                 } else {
-                    trySend(Resource.Error("User not found"))
+                    // Fallback to RTDB if Firestore is missing but Auth user exists
+                    dbRef.child("users").child(uid).child("profile").get()
+                        .addOnSuccessListener { rtdbSnapshot ->
+                            val rtdbUser = rtdbSnapshot.getValue(User::class.java)
+                            if (rtdbUser != null) {
+                                launch {
+                                    dao.insertUser(rtdbUser.toEntity())
+                                    firestore.collection("users").document(uid).set(rtdbUser)
+                                }
+                                trySend(Resource.Success(rtdbUser))
+                            } else {
+                                trySend(Resource.Error("User profile not found"))
+                            }
+                        }
                 }
             }
             .addOnFailureListener {
@@ -84,7 +99,7 @@ class UserRepositoryImpl @Inject constructor(
 
     override suspend fun updateUser(user: User): Resource<Unit> {
         return try {
-            // Check Duplicate Phone
+            // Check Duplicate Phone in RTDB (or move this to Cloud Function/Firestore index)
             if (user.phoneNumber.isNotBlank()) {
                 val snapshot = dbRef.child("users").get().await()
                 val duplicate = snapshot.children.any { 
@@ -94,10 +109,9 @@ class UserRepositoryImpl @Inject constructor(
             }
 
             dao.insertUser(user.toEntity())
-            val updates = mapOf<String, Any>(
-                "users/${user.uid}/profile" to user
-            )
-            dbRef.updateChildren(updates).await()
+            firestore.collection("users").document(user.uid).set(user).await()
+            dbRef.child("users").child(user.uid).child("profile").setValue(user).await()
+            
             Resource.Success(Unit)
         } catch (e: Exception) {
             FirebaseCrashlytics.getInstance().recordException(

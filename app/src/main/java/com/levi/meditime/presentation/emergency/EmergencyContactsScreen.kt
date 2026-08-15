@@ -134,16 +134,17 @@ fun EmergencyContactsScreen(
     }
 
     if (state.showOtpDialog && pendingContactData != null) {
+        val data = pendingContactData ?: emptyMap()
         SensitiveActionOtpDialog(
             type = OtpType.ADD_EMERGENCY,
             onDismiss = viewModel::dismissOtpDialog,
             onVerify = { otp ->
                 viewModel.verifyOtpAndAddContact(
                     otp = otp,
-                    name = pendingContactData!!["name"] as String,
-                    relation = pendingContactData!!["relation"] as String,
-                    phone = pendingContactData!!["phone"] as String,
-                    notify = pendingContactData!!["notify"] as Boolean
+                    name = data["name"] as? String ?: "",
+                    relation = data["relation"] as? String ?: "",
+                    phone = data["phone"] as? String ?: "",
+                    notify = data["notify"] as? Boolean ?: false
                 ) {
                     pendingContactData = null
                 }
@@ -257,6 +258,14 @@ fun AddEmergencyContactBottomSheet(
         }
     )
 
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            contactPickerLauncher.launch(null)
+        }
+    }
+
     ModalBottomSheet(onDismissRequest = onDismiss, shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp), containerColor = MaterialTheme.colorScheme.surface) {
         Column(
             modifier = Modifier
@@ -266,7 +275,14 @@ fun AddEmergencyContactBottomSheet(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.add_contact), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
-                TextButton(onClick = { contactPickerLauncher.launch(null) }) {
+                TextButton(onClick = { 
+                    val status = androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.READ_CONTACTS)
+                    if (status == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                        contactPickerLauncher.launch(null)
+                    } else {
+                        permissionLauncher.launch(android.Manifest.permission.READ_CONTACTS)
+                    }
+                }) {
                     Icon(Icons.Default.Person, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(R.string.from_contacts))

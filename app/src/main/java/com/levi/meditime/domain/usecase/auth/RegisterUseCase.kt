@@ -13,18 +13,14 @@ class RegisterUseCase @Inject constructor(
     suspend operator fun invoke(
         name: String,
         email: String,
-        pass: String,
-        age: Int,
-        gender: String,
-        emergencyContact: String
+        pass: String
     ): Resource<String> {
-        if (name.isBlank()) return Resource.Error("Name cannot be empty")
-        if (email.isBlank()) return Resource.Error("Email cannot be empty")
+        if (name.isBlank()) return Resource.Error("Please enter your name")
+        if (email.isBlank()) return Resource.Error("Please enter your email address")
         if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-            return Resource.Error("Invalid email format")
+            return Resource.Error("Please enter a valid email address")
         }
         if (pass.length < 6) return Resource.Error("Password must be at least 6 characters")
-        if (age <= 0) return Resource.Error("Please enter a valid age")
 
         val authResult = authRepository.register(email, pass)
         
@@ -33,16 +29,16 @@ class RegisterUseCase @Inject constructor(
             val user = User(
                 uid = uid,
                 name = name,
-                email = email,
-                age = age,
-                gender = gender,
-                emergencyContact = emergencyContact
+                email = email
             )
             val dbResult = userRepository.saveUser(user)
             return if (dbResult is Resource.Success) {
                 Resource.Success(uid)
             } else {
-                Resource.Error(dbResult.message ?: "Could not save user profile")
+                // If profile creation fails, we still have the Auth account, 
+                // but the app might be in a half-ready state.
+                // We'll let the user proceed and handle profile recovery during login.
+                Resource.Success(uid)
             }
         }
         

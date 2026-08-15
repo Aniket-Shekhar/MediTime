@@ -167,8 +167,11 @@ fun DashboardHeader(userName: String, onProfileClick: () -> Unit, onNotification
                 .clickable { onProfileClick() },
             color = MaterialTheme.colorScheme.primaryContainer
         ) {
+            val avatarUrl = remember(userName) {
+                "https://ui-avatars.com/api/?name=${android.net.Uri.encode(userName)}&background=14B8A6&color=fff"
+            }
             AsyncImage(
-                model = "https://ui-avatars.com/api/?name=$userName&background=14B8A6&color=fff",
+                model = avatarUrl,
                 contentDescription = "Profile",
                 contentScale = ContentScale.Crop
             )

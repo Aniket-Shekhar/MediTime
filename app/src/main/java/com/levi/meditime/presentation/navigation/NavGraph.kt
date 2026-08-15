@@ -101,7 +101,8 @@ fun NavGraph(
                 },
                 onNavigateToEmailVerify = { email ->
                     navController.navigate(Screen.EmailVerification.createRoute(email))
-                }
+                },
+                onBack = { navController.popBackStack() }
             )
         }
         composable(Screen.Login.route) {
@@ -135,12 +136,12 @@ fun NavGraph(
             } else {
                 DashboardScreen(
                     onAddMedicine = { navController.navigate(Screen.AddMedicine.route) },
-                    onNavigateToSymptoms = { navigateTo(Screen.Symptoms.route) },
+                    onNavigateToSymptoms = { navigateTo(Screen.Symptoms.createRoute()) },
                     onNavigateToSOS = { navigateTo(Screen.SOS.route) },
                     onNavigateToPrescriptions = { navigateTo(Screen.PrescriptionScanner.route) },
-                    onNavigateToAppointments = { navigateTo(Screen.Appointments.route) },
+                    onNavigateToAppointments = { navigateTo(Screen.Appointments.createRoute()) },
                     onNavigateToNotifications = { navigateTo(Screen.Notifications.route) },
-                    onNavigateToReports = { navigateTo(Screen.Reports.route) },
+                    onNavigateToReports = { navigateTo(Screen.Reports.createRoute()) },
                     onNavigateToProfile = { navigateTo(Screen.Account.route) },
                     onNavigateToMedicineDetail = { id -> 
                         navController.navigate(Screen.MedicineDetail.createRoute(id)) 
