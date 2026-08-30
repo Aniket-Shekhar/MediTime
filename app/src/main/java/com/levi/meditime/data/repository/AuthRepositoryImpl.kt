@@ -73,6 +73,7 @@ class AuthRepositoryImpl @Inject constructor(
     }
 
     override suspend fun register(email: String, pass: String): Resource<String> {
+        com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().log("Auth: register started")
         return try {
             kotlinx.coroutines.withTimeout(15000L) {
                 val result = auth.createUserWithEmailAndPassword(email, pass).await()
@@ -98,12 +99,14 @@ class AuthRepositoryImpl @Inject constructor(
                     firestore.collection("users").document(uid).set(initialProfile).await()
                 }
                 auditLogManager.logEvent(AuditLogManager.ACTION_REGISTER, uid)
+                com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().log("Auth: register success")
                 Resource.Success(uid)
             }
         } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+            com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().log("Auth: register timeout")
             Resource.Error("Registration timed out. Please check your connection.")
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(
+            com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(
                 Exception(SecurityUtils.scrubPii(e.message), e)
             )
             Resource.Error(e.message ?: "Registration failed")
@@ -111,6 +114,7 @@ class AuthRepositoryImpl @Inject constructor(
     }
 
     override suspend fun login(email: String, pass: String): Resource<String> {
+        com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().log("Auth: login started")
         return try {
             kotlinx.coroutines.withTimeout(15000L) {
                 val result = auth.signInWithEmailAndPassword(email, pass).await()
@@ -135,12 +139,14 @@ class AuthRepositoryImpl @Inject constructor(
                     
                     auditLogManager.logEvent(AuditLogManager.ACTION_LOGIN, uid)
                 }
+                com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().log("Auth: login success")
                 Resource.Success(uid)
             }
         } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+            com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().log("Auth: login timeout")
             Resource.Error("Login timed out. Please check your connection.")
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(
+            com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(
                 Exception(SecurityUtils.scrubPii(e.message), e)
             )
             Resource.Error(e.message ?: "Login failed")

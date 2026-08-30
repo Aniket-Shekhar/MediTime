@@ -53,10 +53,17 @@ class MediTimeApplication : Application(), Configuration.Provider, ImageLoaderFa
     }
 
     override fun onCreate() {
+        // Part 0: Critical Firebase initialization BEFORE super.onCreate() 
+        // to ensure Hilt singletons can access Firebase services safely during injection.
+        try {
+            com.google.firebase.FirebaseApp.initializeApp(this)
+        } catch (e: Exception) {
+            android.util.Log.e("MediTimeApp", "Failed to initialize Firebase: ${e.message}")
+        }
+
         super.onCreate()
         
-        FirebaseApp.initializeApp(this)
-        val firebaseAppCheck = FirebaseAppCheck.getInstance()
+        val firebaseAppCheck = com.google.firebase.appcheck.FirebaseAppCheck.getInstance()
         if (BuildConfig.DEBUG) {
             android.util.Log.d("OTP_DEBUG", "Initializing App Check Debug Provider")
             // PRD 1.3: Log debug token for Firebase Console registration
@@ -64,11 +71,11 @@ class MediTimeApplication : Application(), Configuration.Provider, ImageLoaderFa
             android.util.Log.i("APP_CHECK_DEBUG", "FETCHING APP CHECK DEBUG TOKEN...")
             android.util.Log.i("APP_CHECK_DEBUG", "***************************************************")
             firebaseAppCheck.installAppCheckProviderFactory(
-                DebugAppCheckProviderFactory.getInstance()
+                com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory.getInstance()
             )
         } else {
             firebaseAppCheck.installAppCheckProviderFactory(
-                PlayIntegrityAppCheckProviderFactory.getInstance()
+                com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory.getInstance()
             )
         }
 
@@ -77,24 +84,28 @@ class MediTimeApplication : Application(), Configuration.Provider, ImageLoaderFa
     }
 
     private fun scheduleBackgroundWorkers() {
-        val workManager = WorkManager.getInstance(this)
+        try {
+            val workManager = WorkManager.getInstance(this)
 
-        // 1. Refill Reminder Worker (Every 6 hours)
-        val refillRequest = PeriodicWorkRequestBuilder<RefillReminderWorker>(6, TimeUnit.HOURS)
-            .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
-            .build()
-        workManager.enqueueUniquePeriodicWork("refill_check", ExistingPeriodicWorkPolicy.KEEP, refillRequest)
+            // 1. Refill Reminder Worker (Every 6 hours)
+            val refillRequest = PeriodicWorkRequestBuilder<RefillReminderWorker>(6, TimeUnit.HOURS)
+                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+                .build()
+            workManager.enqueueUniquePeriodicWork("refill_check", ExistingPeriodicWorkPolicy.KEEP, refillRequest)
 
-        // 2. Appointment Worker (Every 1 hour)
-        val appointmentRequest = PeriodicWorkRequestBuilder<AppointmentWorker>(1, TimeUnit.HOURS)
-            .build()
-        workManager.enqueueUniquePeriodicWork("appointment_check", ExistingPeriodicWorkPolicy.KEEP, appointmentRequest)
+            // 2. Appointment Worker (Every 1 hour)
+            val appointmentRequest = PeriodicWorkRequestBuilder<AppointmentWorker>(1, TimeUnit.HOURS)
+                .build()
+            workManager.enqueueUniquePeriodicWork("appointment_check", ExistingPeriodicWorkPolicy.KEEP, appointmentRequest)
 
-        // 4. Sync Worker (Every 1 hour) - PRD 1.3
-        val syncRequest = PeriodicWorkRequestBuilder<com.levi.meditime.worker.SyncWorker>(1, TimeUnit.HOURS)
-            .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
-            .build()
-        workManager.enqueueUniquePeriodicWork("sync_data", ExistingPeriodicWorkPolicy.KEEP, syncRequest)
+            // 4. Sync Worker (Every 1 hour) - PRD 1.3
+            val syncRequest = PeriodicWorkRequestBuilder<com.levi.meditime.worker.SyncWorker>(1, TimeUnit.HOURS)
+                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+                .build()
+            workManager.enqueueUniquePeriodicWork("sync_data", ExistingPeriodicWorkPolicy.KEEP, syncRequest)
+        } catch (e: Exception) {
+            android.util.Log.e("MediTimeApp", "Failed to initialize or schedule background workers: ${e.message}")
+        }
     }
 
 }

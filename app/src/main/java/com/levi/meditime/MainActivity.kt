@@ -48,6 +48,11 @@ import kotlinx.coroutines.tasks.await
 @AndroidEntryPoint
 class MainActivity : androidx.fragment.app.FragmentActivity() {
 
+    companion object {
+        private var recreationCount = 0
+        private var lastRecreationTime = 0L
+    }
+
     private val exceptionHandler = kotlinx.coroutines.CoroutineExceptionHandler { _, throwable ->
         android.util.Log.e("MediTime_Crash", "MainActivity caught exception: ${throwable.localizedMessage}", throwable)
     }
@@ -68,7 +73,29 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
     lateinit var connectivityObserver: com.levi.meditime.core.util.ConnectivityObserver
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Crash Circuit Breaker: Detect and stop infinite recreation loops
+        val now = System.currentTimeMillis()
+        if (now - lastRecreationTime < 3000) {
+            recreationCount++
+        } else {
+            recreationCount = 0
+        }
+        lastRecreationTime = now
+
+        if (recreationCount > 3) {
+            android.util.Log.e("MediTime_Critical", "Recreation loop detected. Circuit breaker active.")
+        }
+
         super.onCreate(savedInstanceState)
+        
+        try {
+            if (com.google.firebase.FirebaseApp.getApps(this).isNotEmpty()) {
+                com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().log("MainActivity onCreate (recreationCount=$recreationCount)")
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("MediTime_Startup", "Firebase not initialized, skipping log")
+        }
+
         enableEdgeToEdge()
         setContent {
             val userSettings by themePreferences.userSettings.collectAsState(initial = null)
@@ -82,6 +109,7 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
             
             LaunchedEffect(Unit) {
                 val startTime = System.currentTimeMillis()
+                com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().log("Startup warm-up started")
                 try {
                     // Part 1: Background Warm-up (Database & Auth)
                     // Added timeout to prevent hanging on startup
@@ -93,13 +121,17 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                             database.get().medicineDao().getMedicinesCount().first()
                         }
                     }
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     android.util.Log.e("MediTime_Startup", "Startup guard failed or timed out: ${e.message}")
+                    if (e is Exception) {
+                        com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
+                    }
                 } finally {
                     // Part 2: Enforce a minimum branding time (1s) and ensure entry (max 5s)
                     val elapsedTime = System.currentTimeMillis() - startTime
                     if (elapsedTime < 1000) kotlinx.coroutines.delay(1000 - elapsedTime)
                     isAuthReady = true
+                    com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().log("Startup warm-up completed")
                 }
             }
 
@@ -122,17 +154,34 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
 
             LaunchedEffect(currentLang) {
                 // Smart Locale Sync: Prevents recreation loops
-                val currentAppLocale = androidx.appcompat.app.AppCompatDelegate.getApplicationLocales().toLanguageTags()
+                if (currentLang.isBlank()) return@LaunchedEffect
                 
-                // Compare only the language part to be resilient (e.g., "en" vs "en-US")
-                val isSameLanguage = currentAppLocale.startsWith(currentLang) || 
-                                   (currentAppLocale.isEmpty() && currentLang == "en")
+                try {
+                    val requestedLocale = androidx.core.os.LocaleListCompat.forLanguageTags(currentLang)
+                    val currentAppLocales = androidx.appcompat.app.AppCompatDelegate.getApplicationLocales()
+                    
+                    // Robust normalization: Compare primary language tags (e.g., "en" vs "en-US")
+                    val requestedTag = requestedLocale.toLanguageTags().split(",").firstOrNull()?.split("-")?.firstOrNull()
+                    val currentTag = currentAppLocales.toLanguageTags().split(",").firstOrNull()?.split("-")?.firstOrNull()
+                    
+                    val isDifferent = requestedTag != null && requestedTag != currentTag
 
-                if (!isSameLanguage) {
-                    android.util.Log.d("MediTime_Locale", "Syncing locale: $currentAppLocale -> $currentLang")
-                    LocaleHelper.applyLocale(currentLang)
-                    // AppCompatDelegate.setApplicationLocales() triggers recreation automatically.
-                    // DO NOT call recreate() here to avoid infinite loops.
+                    if (isDifferent && recreationCount <= 3) {
+                        android.util.Log.d("MediTime_Locale", "Applying requested locale: $currentLang (requested: $requestedTag, current: $currentTag)")
+                        
+                        // Safety check for Firebase logging during startup
+                        try {
+                            if (com.google.firebase.FirebaseApp.getApps(this@MainActivity).isNotEmpty()) {
+                                com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().log("Applying application locale: $currentLang")
+                            }
+                        } catch (e: Exception) {}
+
+                        androidx.appcompat.app.AppCompatDelegate.setApplicationLocales(requestedLocale)
+                    } else if (recreationCount > 3) {
+                        android.util.Log.e("MediTime_Locale", "Locale sync ABORTED due to recreation loop guard.")
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("MediTime_Locale", "Error in locale sync: ${e.message}")
                 }
             }
 

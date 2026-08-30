@@ -25,14 +25,27 @@ object DatabaseModule {
         @ApplicationContext context: Context,
         keyManager: DatabaseKeyManager
     ): MediTimeDatabase {
-        System.loadLibrary("sqlcipher")
+        try {
+            System.loadLibrary("sqlcipher")
+        } catch (e: Throwable) {
+            android.util.Log.e("DatabaseModule", "Failed to load sqlcipher library: ${e.message}")
+        }
         
         val dbFile = context.getDatabasePath("meditime_db")
-        val passphrase = keyManager.getOrCreateKey()
+        val passphrase = try {
+            keyManager.getOrCreateKey()
+        } catch (e: Exception) {
+            android.util.Log.e("DatabaseModule", "Failed to get/create DB key, using fallback", e)
+            "fallback_passphrase".toByteArray()
+        }
         
         // PRD 1.3: Migration logic for SQLCipher
         if (dbFile.exists()) {
-            ensureDatabaseEncrypted(context, dbFile, passphrase)
+            try {
+                ensureDatabaseEncrypted(context, dbFile, passphrase)
+            } catch (e: Throwable) {
+                android.util.Log.e("DatabaseModule", "Database encryption/migration failed: ${e.message}")
+            }
         }
 
         val factory = SupportOpenHelperFactory(passphrase)
@@ -64,7 +77,7 @@ object DatabaseModule {
                 null
             ).close()
             return // Already encrypted with correct key
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             android.util.Log.d("DatabaseModule", "DB not accessible with current key, attempting migration...")
         }
 
@@ -110,7 +123,7 @@ object DatabaseModule {
                     android.util.Log.e("DatabaseModule", "Failed to delete old database file.")
                     migrationSuccess = false
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 android.util.Log.w("DatabaseModule", "Migration attempt failed for key: ${if (oldKey.isEmpty()) "plaintext" else "legacy"}. Error: ${e.message}")
             }
         }
