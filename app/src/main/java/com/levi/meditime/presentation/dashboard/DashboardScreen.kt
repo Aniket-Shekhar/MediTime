@@ -7,6 +7,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,12 +23,10 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import androidx.compose.ui.res.stringResource
@@ -56,49 +55,39 @@ fun DashboardScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(GessoCanvas)
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
-                bottom = 140.dp,
-                top = 60.dp,
-                start = 24.dp,
-                end = 24.dp
+                bottom = 120.dp,
+                top = 24.dp,
+                start = GessoSpacing.s4,
+                end = GessoSpacing.s4
             ),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(GessoSpacing.s4)
         ) {
-            // v3.0 Header
+            // Header
             item {
                 DashboardHeader(
-                    userName = state.userName,
-                    onProfileClick = onNavigateToProfile,
                     onNotificationClick = onNavigateToNotifications
                 )
             }
 
-            // v3.0 Today's Progress Card
+            // Family Switcher
             item {
-                TodayProgressCard(
-                    completed = state.completedDosesToday,
-                    total = state.totalDosesToday,
+                FamilySwitcher()
+            }
+
+            // Family Medicine Hero Card
+            item {
+                FamilyMedicineHero(
+                    state = state,
                     onClick = onNavigateToReports
                 )
             }
 
-            // v3.0 Next Medicine Card
-            item {
-                if (!state.isLoading && state.medicines.isNotEmpty()) {
-                    NextMedicineCard(
-                        medicine = state.medicines.first(),
-                        onTaken = { viewModel.takeMedicine(state.medicines.first()) },
-                        onSkip = { viewModel.skipMedicine(state.medicines.first()) },
-                        onClick = { onNavigateToMedicineDetail(state.medicines.first().id) }
-                    )
-                }
-            }
-
-            // v3.0 Quick Actions Grid
+            // Quick Actions
             item {
                 QuickActionsGrid(
                     onAddMedicine = onAddMedicine,
@@ -108,181 +97,212 @@ fun DashboardScreen(
                 )
             }
 
-            // v3.0 Medicine Stock Card
+            // Medicine Schedule
             item {
-                SectionTitle(title = stringResource(R.string.medicine_stock), actionText = stringResource(R.string.view_all), onActionClick = onViewAllMedicines)
-                MedicineStockCard(state.medicines.take(2))
-            }
-
-            // v3.0 Family Status Card
-            item {
-                SectionTitle(title = stringResource(R.string.family_status), actionText = stringResource(R.string.view_all), onActionClick = onViewAllFamily)
-                FamilyStatusCard()
-            }
-
-            // v3.0 Recent Activity
-            item {
-                SectionTitle(title = stringResource(R.string.recent_activity))
-                RecentActivityCard()
+                SectionTitle(title = "Mom's schedule today", actionText = "View all", onActionClick = onViewAllMedicines)
+                MedicineScheduleToday(
+                    medicines = state.medicines,
+                    onMedicineClick = onNavigateToMedicineDetail
+                )
             }
         }
     }
 }
 
 @Composable
-fun DashboardHeader(userName: String, onProfileClick: () -> Unit, onNotificationClick: () -> Unit) {
+fun DashboardHeader(onNotificationClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(80.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(vertical = GessoSpacing.s1),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Column(modifier = Modifier.weight(1f)) {
+        Column {
             Text(
-                text = stringResource(R.string.good_morning, userName) + " \uD83D\uDC4B",
-                style = MaterialTheme.typography.displayLarge.copy(fontSize = 24.sp),
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = stringResource(R.string.take_care_health),
+                text = "Good morning",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = GessoFgMuted,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = "Priya's Family",
+                style = MaterialTheme.typography.headlineLarge,
+                color = GessoFg,
+                fontWeight = FontWeight.ExtraBold
             )
         }
         
-        IconButton(
-            onClick = onNotificationClick,
-            modifier = Modifier.background(MaterialTheme.colorScheme.surface, CircleShape).size(44.dp).border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f), CircleShape)
-        ) {
-            Icon(Icons.Rounded.Notifications, null, tint = MaterialTheme.colorScheme.onSurface)
-        }
-        
-        Spacer(Modifier.width(12.dp))
-        
-        Surface(
+        Box(
             modifier = Modifier
-                .size(48.dp)
-                .clip(CircleShape)
-                .clickable { onProfileClick() },
-            color = MaterialTheme.colorScheme.primaryContainer
+                .size(44.dp)
+                .background(Color.White, CircleShape)
+                .border(2.dp, GessoDivider, CircleShape)
+                .clickable { onNotificationClick() },
+            contentAlignment = Alignment.Center
         ) {
-            val avatarUrl = remember(userName) {
-                "https://ui-avatars.com/api/?name=${android.net.Uri.encode(userName)}&background=14B8A6&color=fff"
-            }
-            AsyncImage(
-                model = avatarUrl,
-                contentDescription = "Profile",
-                contentScale = ContentScale.Crop
+            Icon(
+                Icons.Rounded.Notifications,
+                contentDescription = "Notifications",
+                tint = GessoFg,
+                modifier = Modifier.size(24.dp)
             )
         }
     }
 }
 
 @Composable
-fun TodayProgressCard(completed: Int, total: Int, onClick: () -> Unit) {
-    val progress = if (total > 0) completed.toFloat() / total else 0f
-    val animatedProgress by animateFloatAsState(targetValue = progress, animationSpec = tween(1000), label = "")
+fun FamilySwitcher() {
+    val members = listOf(
+        Pair("Mom", "https://ui-avatars.com/api/?name=Mom&background=2dd4bf&color=000"),
+        Pair("Dad", "https://ui-avatars.com/api/?name=Dad&background=ebebeb&color=000"),
+        Pair("Aanya", "https://ui-avatars.com/api/?name=Aanya&background=ebebeb&color=000"),
+        Pair("You", "https://ui-avatars.com/api/?name=You&background=ebebeb&color=000")
+    )
 
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(GessoSpacing.s2),
+        contentPadding = PaddingValues(vertical = GessoSpacing.s1)
+    ) {
+        items(members) { (name, url) ->
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(GessoSpacing.s1)
+            ) {
+                Surface(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .then(
+                            if (name == "Mom") Modifier.border(3.dp, GessoPrimary, CircleShape)
+                            else Modifier
+                        ),
+                    shape = CircleShape,
+                    color = GessoSurfaceRecessed
+                ) {
+                    AsyncImage(
+                        model = url,
+                        contentDescription = name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+                Text(
+                    text = name,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (name == "Mom") GessoFg else GessoFgMuted,
+                    fontWeight = if (name == "Mom") FontWeight.Bold else FontWeight.Medium
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun FamilyMedicineHero(state: DashboardState, onClick: () -> Unit) {
     AppCard(
-        modifier = Modifier.fillMaxWidth().height(160.dp),
-        backgroundColor = MaterialTheme.colorScheme.surface,
-        elevation = Shadow.card,
+        modifier = Modifier.fillMaxWidth(),
+        backgroundColor = Color.White,
         onClick = onClick
     ) {
         Row(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(GessoSpacing.s2)
         ) {
-            Box(modifier = Modifier.size(100.dp), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(
-                    progress = { animatedProgress },
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.primary,
-                    strokeWidth = 10.dp,
-                    trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                    strokeCap = StrokeCap.Round
+            Surface(
+                modifier = Modifier.size(64.dp),
+                shape = CircleShape,
+                border = androidx.compose.foundation.BorderStroke(3.dp, GessoDivider)
+            ) {
+                AsyncImage(
+                    model = "https://ui-avatars.com/api/?name=Mom&background=ebebeb&color=000",
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Mom",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = GessoFg
                 )
                 Text(
-                    text = "${(progress * 100).toInt()}%",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    text = "${state.completedDosesToday} of ${state.totalDosesToday} medicines taken today",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = GessoFgMuted
                 )
             }
-            
-            Spacer(Modifier.width(24.dp))
-            
-            Column {
-                Text(text = stringResource(R.string.todays_progress), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                Spacer(Modifier.height(8.dp))
-                ProgressBadge(text = stringResource(R.string.taken_badge, completed), color = SuccessGreen, icon = Icons.Rounded.CheckCircle)
-                Spacer(Modifier.height(4.dp))
-                ProgressBadge(text = stringResource(R.string.upcoming_badge, total - completed), color = InfoBlue, icon = Icons.Rounded.Schedule)
-                Spacer(Modifier.height(4.dp))
-                ProgressBadge(text = stringResource(R.string.missed_badge, 0), color = DangerRed, icon = Icons.Rounded.Cancel)
+            Surface(
+                color = GessoSecondary,
+                shape = RoundedCornerShape(GessoRadius.full),
+                modifier = Modifier.align(Alignment.Top)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(Icons.Rounded.EmojiEvents, null, modifier = Modifier.size(14.dp), tint = Color.Black)
+                    Text("7-day streak", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.ExtraBold, color = Color.Black)
+                }
             }
         }
-    }
-}
 
-@Composable
-fun ProgressBadge(text: String, color: Color, icon: ImageVector) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, tint = color, modifier = Modifier.size(14.dp))
-        Spacer(Modifier.width(6.dp))
-        Text(text = text, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
+        Spacer(Modifier.height(GessoSpacing.s3))
 
-@Composable
-fun NextMedicineCard(medicine: Medicine, onTaken: () -> Unit, onSkip: () -> Unit, onClick: () -> Unit) {
-    AppCard(
-        modifier = Modifier.fillMaxWidth(),
-        onClick = onClick,
-        elevation = Shadow.card
-    ) {
-        Column(modifier = Modifier.padding(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(
-                    modifier = Modifier.size(56.dp),
-                    shape = RoundedCornerShape(Radius.medium),
-                    color = MaterialTheme.colorScheme.primaryContainer
-                ) {
-                    if (medicine.imageUrl != null) {
-                        AsyncImage(model = medicine.imageUrl, contentDescription = null, contentScale = ContentScale.Crop)
-                    } else {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Rounded.Medication, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
-                        }
-                    }
-                }
-                Spacer(Modifier.width(16.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(medicine.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                    Text("08:30 AM • ${medicine.dosage}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(GessoSpacing.s4)
+        ) {
+            // Circular Progress
+            Box(modifier = Modifier.size(120.dp), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(
+                    progress = { if (state.totalDosesToday > 0) state.completedDosesToday.toFloat() / state.totalDosesToday else 0f },
+                    modifier = Modifier.fillMaxSize(),
+                    color = GessoPrimary,
+                    strokeWidth = 12.dp,
+                    trackColor = GessoSurfaceRecessed,
+                    strokeCap = StrokeCap.Round
+                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "${state.completedDosesToday}/${state.totalDosesToday}",
+                        style = MaterialTheme.typography.displaySmall,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = GessoFg
+                    )
+                    Text(
+                        text = "TAKEN",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = GessoFgMuted,
+                        letterSpacing = 0.03.sp
+                    )
                 }
             }
-            
-            Spacer(Modifier.height(16.dp))
-            
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(
-                    onClick = onTaken,
-                    modifier = Modifier.weight(1f).height(44.dp),
-                    shape = RoundedCornerShape(Radius.medium),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                ) {
-                    Text(stringResource(R.string.taken), fontWeight = FontWeight.Bold, color = Color.White)
-                }
-                OutlinedButton(
-                    onClick = onSkip,
-                    modifier = Modifier.weight(1f).height(44.dp),
-                    shape = RoundedCornerShape(Radius.medium),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-                ) {
-                    Text(stringResource(R.string.skip), color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
-                }
+
+            // Next Dose Info
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "NEXT DOSE",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = GessoFgMuted,
+                    letterSpacing = 0.06.sp
+                )
+                Text(
+                    text = state.nextDoseTime ?: "6:00 PM",
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = GessoFg
+                )
+                Text(
+                    text = "Metformin · 500mg after dinner",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = GessoFgMuted
+                )
             }
         }
     }
@@ -290,115 +310,113 @@ fun NextMedicineCard(medicine: Medicine, onTaken: () -> Unit, onSkip: () -> Unit
 
 @Composable
 fun QuickActionsGrid(onAddMedicine: () -> Unit, onScan: () -> Unit, onDoctor: () -> Unit, onSOS: () -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        QuickActionItem(stringResource(R.string.add_med), Icons.Rounded.Add, MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.primary, Modifier.weight(1f), onAddMedicine)
-        QuickActionItem(stringResource(R.string.scan_rx), Icons.Rounded.QrCodeScanner, MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.secondary, Modifier.weight(1f), onScan)
-        QuickActionItem(stringResource(R.string.doctor), Icons.Rounded.MedicalServices, WarningDark.copy(alpha = 0.1f), WarningDark, Modifier.weight(1f), onDoctor)
-        QuickActionItem(stringResource(R.string.sos), Icons.Rounded.Sos, ErrorDark.copy(alpha = 0.1f), ErrorDark, Modifier.weight(1f), onSOS)
+    Column {
+        Text(
+            text = "QUICK ACTIONS",
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = GessoFgMuted,
+            letterSpacing = 0.06.sp,
+            modifier = Modifier.padding(bottom = GessoSpacing.s2)
+        )
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(GessoSpacing.s2)) {
+            QuickActionTile("Add Med", Icons.Rounded.Add, GessoPrimary, Modifier.weight(1f), onAddMedicine)
+            QuickActionTile("Scan Rx", Icons.Rounded.QrCodeScanner, GessoSecondary, Modifier.weight(1f), onScan)
+            QuickActionTile("Doctor", Icons.Rounded.Phone, GessoSurfaceRecessed, Modifier.weight(1f), onDoctor)
+            QuickActionTile("SOS", Icons.Rounded.Emergency, GessoError.copy(alpha = 0.9f), Modifier.weight(1f), onSOS, Color.White)
+        }
     }
 }
 
 @Composable
-fun QuickActionItem(label: String, icon: ImageVector, bgColor: Color, iconColor: Color, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (isPressed) 1.03f else 1f, label = "")
-
+fun QuickActionTile(label: String, icon: ImageVector, color: Color, modifier: Modifier = Modifier, onClick: () -> Unit, iconTint: Color = Color.Black) {
     Column(
-        modifier = modifier.scale(scale).clickable(interactionSource = interactionSource, indication = null) { onClick() },
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier = modifier
+            .background(Color.White, RoundedCornerShape(GessoRadius.md))
+            .border(3.dp, GessoDivider, RoundedCornerShape(GessoRadius.md))
+            .clickable { onClick() }
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Surface(
-            modifier = Modifier.size(64.dp),
-            shape = RoundedCornerShape( Radius.medium),
-            color = bgColor
+            modifier = Modifier.size(44.dp),
+            shape = CircleShape,
+            color = color
         ) {
             Box(contentAlignment = Alignment.Center) {
-                Icon(icon, null, tint = iconColor, modifier = Modifier.size(28.dp))
+                Icon(icon, null, tint = iconTint, modifier = Modifier.size(24.dp))
             }
         }
-        Spacer(Modifier.height(8.dp))
-        Text(label, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = GessoFg,
+            textAlign = TextAlign.Center
+        )
     }
 }
 
 @Composable
-fun MedicineStockCard(medicines: List<Medicine>) {
-    AppCard(modifier = Modifier.fillMaxWidth()) {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            medicines.forEach { medicine ->
-                val isLow = medicine.currentStock <= medicine.minimumStock
-                Row(verticalAlignment = Alignment.CenterVertically) {
+fun MedicineScheduleToday(medicines: List<Medicine>, onMedicineClick: (String) -> Unit) {
+    AppCard(
+        modifier = Modifier.fillMaxWidth(),
+        backgroundColor = Color.White,
+        contentPadding = PaddingValues(0.dp)
+    ) {
+        // Mocking some items for the reference design if real list is empty
+        val displayItems = if (medicines.isEmpty()) {
+            listOf(
+                Triple("Metoprolol · 50mg", "8:00 AM · with breakfast", true),
+                Triple("Vitamin D3", "1:00 PM · after lunch", true),
+                Triple("Metformin · 500mg", "6:00 PM · after dinner", false)
+            )
+        } else {
+            medicines.map { Triple(it.name + " · " + it.dosage, "8:00 AM", false) }
+        }
+
+        displayItems.forEachIndexed { index, (title, meta, isDone) ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { 
+                        if (medicines.isNotEmpty()) onMedicineClick(medicines[index].id)
+                    }
+                    .padding(GessoSpacing.s2),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(GessoSpacing.s2)
+            ) {
+                Surface(
+                    modifier = Modifier.size(44.dp),
+                    shape = CircleShape,
+                    color = if (title.contains("Metformin")) GessoSecondary else GessoPrimary
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Rounded.Medication, null, tint = Color.Black, modifier = Modifier.size(24.dp))
+                    }
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = GessoFg)
+                    Text(meta, style = MaterialTheme.typography.bodyMedium, color = GessoFgMuted)
+                }
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .background(if (isDone) GessoPrimary else GessoSurfaceRecessed, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
                     Icon(
-                        if (isLow) Icons.Rounded.Warning else Icons.Rounded.CheckCircle,
+                        if (isDone) Icons.Rounded.Check else Icons.Rounded.Schedule,
                         null,
-                        tint = if (isLow) WarningDark else SuccessDark,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(medicine.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurface)
-                    Text(
-                        text = "${medicine.currentStock} units left",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isLow) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = Color.Black,
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }
+            if (index < displayItems.size - 1) {
+                HorizontalDivider(color = GessoDivider, thickness = 1.dp)
+            }
         }
-    }
-}
-
-@Composable
-fun FamilyStatusCard() {
-    AppCard(modifier = Modifier.fillMaxWidth()) {
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            FamilyStatusItem(
-                name = "Mom",
-                status = "All medicines taken",
-                statusColor = SuccessDark,
-                avatarUrl = "https://ui-avatars.com/api/?name=Mom&background=22C55E&color=fff"
-            )
-            FamilyStatusItem(
-                name = "Dad",
-                status = "Missed evening dose",
-                statusColor = MaterialTheme.colorScheme.error,
-                avatarUrl = "https://ui-avatars.com/api/?name=Dad&background=EF4444&color=fff"
-            )
-        }
-    }
-}
-
-@Composable
-fun FamilyStatusItem(name: String, status: String, statusColor: Color, avatarUrl: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Surface(modifier = Modifier.size(40.dp).clip(CircleShape), color = MaterialTheme.colorScheme.primaryContainer) {
-            AsyncImage(model = avatarUrl, contentDescription = null, contentScale = ContentScale.Crop)
-        }
-        Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-            Text(status, style = MaterialTheme.typography.labelSmall, color = statusColor, fontWeight = FontWeight.SemiBold)
-        }
-    }
-}
-
-@Composable
-fun RecentActivityCard() {
-    AppCard(modifier = Modifier.fillMaxWidth()) {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            ActivityItem("Aspirin taken", SuccessDark, Icons.Rounded.CheckCircle)
-            ActivityItem("Vitamin D skipped", MaterialTheme.colorScheme.onSurfaceVariant, Icons.Rounded.Cancel)
-            ActivityItem("Paracetamol reminder completed", SuccessDark, Icons.Rounded.CheckCircle)
-        }
-    }
-}
-
-@Composable
-fun ActivityItem(text: String, color: Color, icon: ImageVector) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, tint = color, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(12.dp))
-        Text(text, style = MaterialTheme.typography.bodyMedium, color = if (color == MaterialTheme.colorScheme.onSurfaceVariant) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
     }
 }

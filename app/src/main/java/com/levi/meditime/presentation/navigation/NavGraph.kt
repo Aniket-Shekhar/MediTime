@@ -47,6 +47,7 @@ import com.levi.meditime.presentation.prescription.PrescriptionScannerScreen
 import com.levi.meditime.presentation.settings.ReminderSettingsScreen
 import com.levi.meditime.presentation.auth.AuthScreen
 import com.levi.meditime.presentation.auth.OnboardingScreen
+import com.levi.meditime.presentation.med_flow.*
 import com.levi.meditime.datastore.ThemePreferences
 
 @Composable
@@ -144,7 +145,7 @@ fun NavGraph(
                     onNavigateToReports = { navigateTo(Screen.Reports.createRoute()) },
                     onNavigateToProfile = { navigateTo(Screen.Account.route) },
                     onNavigateToMedicineDetail = { id -> 
-                        navController.navigate(Screen.MedicineDetail.createRoute(id)) 
+                        navController.navigate(Screen.MedicationReminder.createRoute(id)) // Launch Gesso Flow
                     },
                     onViewAllMedicines = { navigateTo(Screen.Medicines.route) },
                     onViewAllFamily = { navigateTo(Screen.Family.route) },
@@ -156,6 +157,48 @@ fun NavGraph(
                 )
             }
         }
+        
+        // Gesso Med Flow
+        composable(
+            route = Screen.MedicationReminder.route,
+            arguments = listOf(navArgument("medicineId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val id = backStackEntry.arguments?.getString("medicineId") ?: ""
+            MedicationReminderScreen(
+                medicineId = id,
+                onTakeNow = { navController.navigate(Screen.ConfirmDose.createRoute(id)) },
+                onSkip = { navController.popBackStack() },
+                onInstructions = { /* detail */ },
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable(
+            route = Screen.ConfirmDose.route,
+            arguments = listOf(navArgument("medicineId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val id = backStackEntry.arguments?.getString("medicineId") ?: ""
+            ConfirmDoseScreen(
+                medicineId = id,
+                onConfirm = { navController.navigate(Screen.DoseLogged.createRoute(id)) {
+                    popUpTo(Screen.Dashboard.route)
+                } },
+                onCancel = { navController.popBackStack() }
+            )
+        }
+        composable(
+            route = Screen.DoseLogged.route,
+            arguments = listOf(navArgument("medicineId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val id = backStackEntry.arguments?.getString("medicineId") ?: ""
+            DoseLoggedScreen(
+                medicineId = id,
+                onBackHome = { navController.navigate(Screen.Dashboard.route) {
+                    popUpTo(Screen.Dashboard.route) { inclusive = true }
+                } },
+                onViewNext = { navController.popBackStack() }
+            )
+        }
+
         composable(Screen.Medicines.route) {
             MedicineListScreen(
                 onAddMedicine = { navController.navigate(Screen.AddMedicine.route) },

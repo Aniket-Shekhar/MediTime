@@ -49,6 +49,17 @@ sealed class Screen(val route: String) {
         fun createRoute(memberId: String) = "family_member_detail/$memberId"
     }
     
+    // Medication Logging Flow (New Gesso Design)
+    object MedicationReminder : Screen("medication_reminder/{medicineId}") {
+        fun createRoute(medicineId: String) = "medication_reminder/$medicineId"
+    }
+    object ConfirmDose : Screen("confirm_dose/{medicineId}") {
+        fun createRoute(medicineId: String) = "confirm_dose/$medicineId"
+    }
+    object DoseLogged : Screen("dose_logged/{medicineId}") {
+        fun createRoute(medicineId: String) = "dose_logged/$medicineId"
+    }
+    
     object OtpVerification : Screen("otp_verification/{phoneNumber}") {
         fun createRoute(phoneNumber: String) = "otp_verification/${android.net.Uri.encode(phoneNumber)}"
     }

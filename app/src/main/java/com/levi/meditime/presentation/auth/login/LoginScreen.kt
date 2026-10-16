@@ -2,6 +2,8 @@ package com.levi.meditime.presentation.auth.login
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,6 +14,8 @@ import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Medication
 import androidx.compose.material.icons.rounded.Phone
 import androidx.compose.material.icons.rounded.SwapHoriz
+import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -45,20 +49,22 @@ fun LoginScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    
+    var passwordVisible by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(GessoCanvas)
     ) {
-        // Gradient background decoration
+        // Subtle top gradient
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.4f)
+                .fillMaxHeight(0.35f)
                 .background(
                     Brush.verticalGradient(
-                        listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.background)
+                        listOf(GessoPrimary.copy(alpha = 0.2f), GessoCanvas)
                     )
                 )
         )
@@ -71,156 +77,122 @@ fun LoginScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .padding(horizontal = 24.dp)
+                    .padding(horizontal = GessoSpacing.s4)
                     .verticalScroll(rememberScrollState()),
-                horizontalAlignment = Alignment.CenterHorizontally,
+                horizontalAlignment = Alignment.Start,
                 verticalArrangement = Arrangement.Top
             ) {
-                Spacer(modifier = Modifier.height(64.dp))
+                Spacer(modifier = Modifier.height(GessoSpacing.s8))
                 
-                // Logo Section
-                Surface(
-                    modifier = Modifier.size(80.dp),
-                    shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f)
+                // Branding
+                Box(
+                    modifier = Modifier
+                        .size(60.dp)
+                        .background(GessoPrimary, RoundedCornerShape(GessoRadius.md))
+                        .border(2.dp, GessoDivider, RoundedCornerShape(GessoRadius.md)),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            Icons.Rounded.Medication,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.size(48.dp)
-                        )
-                    }
+                    Icon(
+                        Icons.Rounded.Medication,
+                        contentDescription = null,
+                        tint = Color.Black,
+                        modifier = Modifier.size(32.dp)
+                    )
                 }
                 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(GessoSpacing.s4))
                 
                 Text(
-                    text = "MediTime",
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimary
+                    text = "Welcome to MediTime",
+                    style = MaterialTheme.typography.displayMedium,
+                    color = GessoFg
                 )
                 Text(
-                    text = "Your premium medicine reminder",
+                    text = "Sign in to manage your family's health.",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
-                    textAlign = TextAlign.Center
+                    color = GessoFgMuted
                 )
                 
-                Spacer(modifier = Modifier.height(48.dp))
+                Spacer(modifier = Modifier.height(GessoSpacing.s6))
                 
-                AppCard(modifier = Modifier.fillMaxWidth()) {
-                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                AppCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    backgroundColor = Color.White
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(GessoSpacing.s3)) {
                         Text(
-                            text = if (isPhoneLoginMode) "Phone Authentication" else "Email Login",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
+                            text = if (isPhoneLoginMode) "Use Phone Number" else "Use Email Address",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = GessoFg
                         )
 
                         if (!isPhoneLoginMode) {
-                            OutlinedTextField(
+                            GessoInput(
                                 value = email,
                                 onValueChange = viewModel::onEmailChange,
-                                label = { Text("Email Address") },
-                                leadingIcon = { Icon(Icons.Rounded.Email, null, tint = MaterialTheme.colorScheme.primary) },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(16.dp),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                    focusedContainerColor = MaterialTheme.colorScheme.surface,
-                                    unfocusedContainerColor = MaterialTheme.colorScheme.surface
-                                )
+                                placeholder = "Email Address",
+                                leadingIcon = Icons.Rounded.Email,
+                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Email)
                             )
                             
-                            OutlinedTextField(
+                            GessoInput(
                                 value = password,
                                 onValueChange = viewModel::onPasswordChange,
-                                label = { Text("Password") },
-                                leadingIcon = { Icon(Icons.Rounded.Lock, null, tint = MaterialTheme.colorScheme.primary) },
-                                visualTransformation = PasswordVisualTransformation(),
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(16.dp),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                    focusedContainerColor = MaterialTheme.colorScheme.surface,
-                                    unfocusedContainerColor = MaterialTheme.colorScheme.surface
-                                )
-                            )
-                        } else {
-                            OutlinedTextField(
-                                value = phoneNumber,
-                                onValueChange = viewModel::onPhoneNumberChange,
-                                label = { Text("Phone Number") },
-                                placeholder = { Text("+1 234 567 8900") },
-                                leadingIcon = { Icon(Icons.Rounded.Phone, null, tint = MaterialTheme.colorScheme.primary) },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(16.dp),
-                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                    keyboardType = KeyboardType.Phone
-                                ),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                    focusedContainerColor = MaterialTheme.colorScheme.surface,
-                                    unfocusedContainerColor = MaterialTheme.colorScheme.surface
-                                )
-                            )
-                        }
-                        
-                        Spacer(modifier = Modifier.height(8.dp))
-                        
-                        if (isLoading) {
-                            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                            }
-                        } else {
-                            PrimaryButton(
-                                text = if (isPhoneLoginMode) "Send OTP" else "Sign In",
-                                onClick = {
-                                    viewModel.login(
-                                        onSuccess = {
-                                            if (isPhoneLoginMode) {
-                                                onNavigateToPhoneOtp(phoneNumber)
-                                            } else {
-                                                onLoginSuccess()
-                                            }
-                                        },
-                                        onError = { error ->
-                                            scope.launch {
-                                                snackbarHostState.showSnackbar(error)
-                                            }
-                                        }
-                                    )
+                                placeholder = "Password",
+                                leadingIcon = Icons.Rounded.Lock,
+                                visualTransformation = if (passwordVisible) androidx.compose.ui.text.input.VisualTransformation.None else PasswordVisualTransformation(),
+                                trailingIcon = {
+                                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                        Icon(
+                                            if (passwordVisible) Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff,
+                                            contentDescription = null,
+                                            tint = GessoFgMuted
+                                        )
+                                    }
                                 }
                             )
-                            
-                            SecondaryButton(
-                                text = if (isPhoneLoginMode) "Use Email Instead" else "Login with Phone",
-                                icon = Icons.Rounded.SwapHoriz,
-                                onClick = viewModel::toggleLoginMode
+                        } else {
+                            GessoInput(
+                                value = phoneNumber,
+                                onValueChange = viewModel::onPhoneNumberChange,
+                                placeholder = "Phone Number (+1...)",
+                                leadingIcon = Icons.Rounded.Phone,
+                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Phone)
                             )
                         }
+                        
+                        Spacer(modifier = Modifier.height(GessoSpacing.s1))
+                        
+                        PrimaryButton(
+                            text = if (isPhoneLoginMode) "Get Verification Code" else "Sign In",
+                            loading = isLoading,
+                            onClick = {
+                                viewModel.login(
+                                    onSuccess = {
+                                        if (isPhoneLoginMode) {
+                                            onNavigateToPhoneOtp(phoneNumber)
+                                        } else {
+                                            onLoginSuccess()
+                                        }
+                                    },
+                                    onError = { error ->
+                                        scope.launch {
+                                            snackbarHostState.showSnackbar(error)
+                                        }
+                                    }
+                                )
+                            }
+                        )
+                        
+                        SecondaryButton(
+                            text = if (isPhoneLoginMode) "Sign in with Email" else "Sign in with Phone",
+                            icon = Icons.Rounded.SwapHoriz,
+                            onClick = viewModel::toggleLoginMode
+                        )
                     }
                 }
                 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(GessoSpacing.s4))
                 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -228,21 +200,20 @@ fun LoginScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Don't have an account? ",
+                        text = "New to MediTime? ",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = GessoFgMuted
                     )
-                    TextButton(onClick = onNavigateToSignUp) {
-                        Text(
-                            text = "Sign Up",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
+                    Text(
+                        text = "Create Account",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = GessoAccentText,
+                        modifier = Modifier.clickable { onNavigateToSignUp() }
+                    )
                 }
                 
-                Spacer(modifier = Modifier.height(48.dp))
+                Spacer(modifier = Modifier.height(GessoSpacing.s8))
             }
         }
     }

@@ -6,23 +6,19 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
@@ -30,8 +26,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -43,68 +37,67 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.levi.meditime.presentation.navigation.Screen
 
+// Amber Vigil Constants
+object GessoRadius {
+    val sm = 8.dp
+    val md = 16.dp
+    val lg = 24.dp
+    val full = 9999.dp
+}
+
+object GessoSpacing {
+    val s1 = 8.dp
+    val s2 = 16.dp
+    val s3 = 24.dp
+    val s4 = 32.dp
+    val s6 = 48.dp
+    val s8 = 64.dp
+}
+
 @Composable
 fun AppCard(
     modifier: Modifier = Modifier,
     backgroundColor: Color = MaterialTheme.colorScheme.surface,
     contentColor: Color = MaterialTheme.colorScheme.onSurface,
-    elevation: Dp = Shadow.card,
-    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(Radius.large),
+    elevation: Dp = 1.dp,
+    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(GessoRadius.md),
     onClick: (() -> Unit)? = null,
-    border: Boolean = false,
+    border: Boolean = true,
     contentPadding: PaddingValues? = null,
-    isGlass: Boolean = false,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val accessibilityMode = LocalAccessibilityMode.current
     val haptic = LocalHapticFeedback.current
-    
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.96f else 1f,
+        targetValue = if (isPressed) 0.98f else 1f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
         label = "scale"
     )
 
-    var cardModifier = modifier
+    val borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+    val cardModifier = modifier
         .scale(scale)
-        .then(if (elevation > 0.dp && !isGlass) Modifier.shadow(elevation, shape) else Modifier)
-        .clip(shape)
-    
-    cardModifier = if (isGlass) {
-        cardModifier.background(
-            Brush.linearGradient(listOf(BentoCardGradientStart.copy(alpha = 0.9f), BentoCardGradientEnd.copy(alpha = 0.8f)))
+        .shadow(elevation, shape)
+        .background(backgroundColor, shape)
+        .then(
+            if (border) Modifier.border(1.dp, borderColor, shape) else Modifier
         )
-    } else {
-        cardModifier.background(backgroundColor)
-    }
-    
-    if (border || isGlass) {
-        cardModifier = cardModifier.border(
-            width = 1.dp, 
-            color = if (isGlass) Color.White.copy(alpha = 0.2f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
-            shape = shape
+        .then(
+            if (onClick != null) Modifier.clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onClick()
+                }
+            ) else Modifier
         )
-    }
-    
-    if (onClick != null) {
-        cardModifier = cardModifier.clickable(
-            interactionSource = interactionSource,
-            indication = null,
-            onClick = {
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                onClick()
-            }
-        )
-    }
+        .padding(contentPadding ?: PaddingValues(GessoSpacing.s4))
 
     CompositionLocalProvider(LocalContentColor provides contentColor) {
         Column(
-            modifier = cardModifier.then(
-                if (contentPadding != null) Modifier.padding(contentPadding)
-                else Modifier.padding(if (accessibilityMode) Spacing.section else Spacing.card)
-            ),
+            modifier = cardModifier,
             content = content
         )
     }
@@ -115,32 +108,25 @@ fun PrimaryButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    containerColor: Color = MaterialTheme.colorScheme.primary,
-    contentColor: Color = Color.White,
+    containerColor: Color = GessoPrimary,
+    contentColor: Color = Color.Black,
     icon: ImageVector? = null,
     loading: Boolean = false,
     enabled: Boolean = true,
     useGradient: Boolean = false
 ) {
-    val accessibilityMode = LocalAccessibilityMode.current
     val haptic = LocalHapticFeedback.current
-    val height = if (accessibilityMode) 72.dp else 56.dp
-    
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(if (isPressed) 0.96f else 1f, label = "btnScale")
 
-    val buttonModifier = modifier
-        .height(height)
-        .fillMaxWidth()
-
-    val finalModifier = if (useGradient && enabled && !loading) {
-        buttonModifier.background(
-            Brush.horizontalGradient(listOf(PrimaryTeal, PrimaryTealDark)),
-            RoundedCornerShape(Radius.small)
+    val backgroundModifier = if (useGradient) {
+        Modifier.background(
+            Brush.horizontalGradient(listOf(GessoPrimary, GessoSecondary)),
+            RoundedCornerShape(GessoRadius.md)
         )
     } else {
-        buttonModifier
+        Modifier.background(containerColor, RoundedCornerShape(GessoRadius.md))
     }
 
     Button(
@@ -148,43 +134,34 @@ fun PrimaryButton(
             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             onClick()
         },
-        modifier = finalModifier,
-        shape = RoundedCornerShape(Radius.small),
+        modifier = modifier
+            .height(64.dp)
+            .scale(scale)
+            .then(backgroundModifier),
+        shape = RoundedCornerShape(GessoRadius.md),
         interactionSource = interactionSource,
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (useGradient) Color.Transparent else containerColor,
+            containerColor = Color.Transparent,
             contentColor = contentColor,
-            disabledContainerColor = containerColor.copy(alpha = 0.3f),
+            disabledContainerColor = Color.Transparent,
             disabledContentColor = contentColor.copy(alpha = 0.5f)
         ),
         enabled = enabled && !loading,
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
-        contentPadding = PaddingValues(0.dp)
+        contentPadding = PaddingValues(horizontal = GessoSpacing.s6)
     ) {
-        // Inner Box with scale ensures the visual press effect doesn't shrink the actual Button hit target
-        Box(
-            modifier = Modifier.fillMaxSize().scale(scale),
-            contentAlignment = Alignment.Center
-        ) {
-            if (loading) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = contentColor, strokeWidth = 2.dp)
-            } else {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically, 
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    if (icon != null) {
-                        Icon(icon, null, modifier = Modifier.size(if (accessibilityMode) 32.dp else 22.dp))
-                        Spacer(Modifier.width(Spacing.small))
-                    }
-                    Text(
-                        text = text, 
-                        fontWeight = FontWeight.Bold, 
-                        fontSize = if (accessibilityMode) 20.sp else 16.sp,
-                        maxLines = 1,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                    )
+        if (loading) {
+            CircularProgressIndicator(modifier = Modifier.size(24.dp), color = contentColor, strokeWidth = 2.dp)
+        } else {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (icon != null) {
+                    Icon(icon, null, modifier = Modifier.size(24.dp))
+                    Spacer(Modifier.width(GessoSpacing.s1))
                 }
+                Text(
+                    text = text, 
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }
@@ -198,9 +175,7 @@ fun SecondaryButton(
     icon: ImageVector? = null,
     enabled: Boolean = true
 ) {
-    val accessibilityMode = LocalAccessibilityMode.current
     val haptic = LocalHapticFeedback.current
-    
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(if (isPressed) 0.96f else 1f, label = "secBtnScale")
@@ -211,38 +186,215 @@ fun SecondaryButton(
             onClick()
         },
         modifier = modifier
-            .height(if (accessibilityMode) 72.dp else 56.dp)
-            .fillMaxWidth(),
-        shape = RoundedCornerShape(Radius.small),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+            .height(64.dp)
+            .scale(scale),
+        shape = RoundedCornerShape(GessoRadius.md),
+        border = androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary),
         interactionSource = interactionSource,
         enabled = enabled,
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
-        contentPadding = PaddingValues(0.dp)
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
+        contentPadding = PaddingValues(horizontal = GessoSpacing.s6)
     ) {
-        Box(
-            modifier = Modifier.fillMaxSize().scale(scale),
-            contentAlignment = Alignment.Center
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (icon != null) {
+                Icon(icon, null, modifier = Modifier.size(24.dp))
+                Spacer(Modifier.width(GessoSpacing.s1))
+            }
+            Text(
+                text = text, 
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+@Composable
+fun GessoInput(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    modifier: Modifier = Modifier,
+    leadingIcon: ImageVector? = null,
+    trailingIcon: @Composable (() -> Unit)? = null,
+    isError: Boolean = false,
+    visualTransformation: androidx.compose.ui.text.input.VisualTransformation = androidx.compose.ui.text.input.VisualTransformation.None,
+    keyboardOptions: androidx.compose.foundation.text.KeyboardOptions = androidx.compose.foundation.text.KeyboardOptions.Default
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        placeholder = { Text(placeholder, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant) },
+        leadingIcon = leadingIcon?.let { { Icon(it, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) } },
+        trailingIcon = trailingIcon,
+        isError = isError,
+        visualTransformation = visualTransformation,
+        keyboardOptions = keyboardOptions,
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(GessoRadius.md),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+            errorBorderColor = MaterialTheme.colorScheme.error,
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+            errorContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+            unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+        ),
+        textStyle = MaterialTheme.typography.bodyLarge
+    )
+}
+
+@Composable
+fun GessoBadge(
+    text: String,
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.primary
+) {
+    Surface(
+        color = color.copy(alpha = 0.12f),
+        shape = RoundedCornerShape(GessoRadius.full),
+        modifier = modifier
+    ) {
+        Text(
+            text = text.uppercase(),
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = color,
+            letterSpacing = 0.04.sp
+        )
+    }
+}
+
+@Composable
+fun EmptyState(
+    illustration: @Composable () -> Unit,
+    title: String,
+    description: String,
+    actionText: String? = null,
+    onActionClick: (() -> Unit)? = null
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        illustration()
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = description,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+        if (actionText != null && onActionClick != null) {
+            Spacer(modifier = Modifier.height(24.dp))
+            PrimaryButton(text = actionText, onClick = onActionClick)
+        }
+    }
+}
+
+@Composable
+fun AnimatedFAB(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    icon: ImageVector = Icons.Rounded.Add,
+    text: String? = null
+) {
+    val haptic = LocalHapticFeedback.current
+    FloatingActionButton(
+        onClick = {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            onClick()
+        },
+        modifier = modifier,
+        containerColor = MaterialTheme.colorScheme.primary,
+        contentColor = Color.Black,
+        shape = CircleShape
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = if (text != null) 20.dp else 16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically, 
-                horizontalArrangement = Arrangement.Center
-            ) {
-                if (icon != null) {
-                    Icon(icon, contentDescription = null, modifier = Modifier.size(if (accessibilityMode) 32.dp else 22.dp))
-                    Spacer(Modifier.width(Spacing.small))
-                }
-                Text(
-                    text = text, 
-                    fontWeight = FontWeight.SemiBold, 
-                    fontSize = if (accessibilityMode) 20.sp else 16.sp, 
-                    color = MaterialTheme.colorScheme.primary,
-                    maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                )
+            Icon(icon, contentDescription = null, modifier = Modifier.size(24.dp))
+            if (text != null) {
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = text, fontWeight = FontWeight.Bold)
             }
         }
     }
+}
+
+@Composable
+fun TimeWheelPicker(
+    modifier: Modifier = Modifier,
+    initialHour: Int = 8,
+    initialMinute: Int = 0,
+    onTimeSelected: (Int, Int) -> Unit
+) {
+    var hour by remember { mutableStateOf(initialHour) }
+    var minute by remember { mutableStateOf(initialMinute) }
+
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        OutlinedButton(onClick = { 
+            hour = (hour + 1) % 24
+            onTimeSelected(hour, minute)
+        }) {
+            Text(text = String.format("%02d", hour), style = MaterialTheme.typography.headlineMedium)
+        }
+        Text(" : ", style = MaterialTheme.typography.headlineMedium)
+        OutlinedButton(onClick = { 
+            minute = (minute + 15) % 60
+            onTimeSelected(hour, minute)
+        }) {
+            Text(text = String.format("%02d", minute), style = MaterialTheme.typography.headlineMedium)
+        }
+    }
+}
+
+fun Modifier.dashedBorder(
+    color: Color,
+    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(GessoRadius.md),
+    strokeWidth: Dp = 1.dp,
+    dashLength: Dp = 4.dp,
+    gapLength: Dp = 4.dp
+): Modifier = this.drawBehind {
+    val stroke = Stroke(
+        width = strokeWidth.toPx(),
+        pathEffect = PathEffect.dashPathEffect(floatArrayOf(dashLength.toPx(), gapLength.toPx()), 0f)
+    )
+    val outline = shape.createOutline(size, layoutDirection, this)
+    drawOutline(outline, color, style = stroke)
+}
+
+@Composable
+fun ShimmerItem(
+    modifier: Modifier = Modifier,
+    height: Dp = 80.dp,
+    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(GessoRadius.md)
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(height)
+            .background(MaterialTheme.colorScheme.surfaceVariant, shape)
+    )
 }
 
 @Composable
@@ -269,54 +421,50 @@ fun FloatingBottomNavigation(
         modifier = Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 24.dp),
+            .padding(horizontal = 16.dp, vertical = 16.dp),
         contentAlignment = Alignment.BottomCenter
     ) {
-        // Expandable Menu Overlay
         AnimatedVisibility(
             visible = isExpanded,
             enter = fadeIn() + expandVertically(expandFrom = Alignment.Bottom),
             exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Bottom)
         ) {
-            Column(
-                modifier = Modifier
-                    .padding(bottom = 90.dp)
-                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(24.dp))
-                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f), RoundedCornerShape(24.dp))
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+            AppCard(
+                modifier = Modifier.padding(bottom = 80.dp),
+                border = true,
+                elevation = 4.dp
             ) {
-                FabMenuItem("Add Medicine", Icons.Rounded.AddCircle, PrimaryTeal) {
-                    onAddMedicine()
-                    isExpanded = false
-                }
-                FabMenuItem("Scan Prescription", Icons.Rounded.QrCodeScanner, InfoBlue) {
-                    onScanPrescription()
-                    isExpanded = false
-                }
-                FabMenuItem("Doctor Appointment", Icons.Rounded.MedicalServices, WarningOrange) {
-                    onAddAppointment()
-                    isExpanded = false
-                }
-                FabMenuItem("Add Family", Icons.Rounded.GroupAdd, SuccessGreen) {
-                    onAddFamily()
-                    isExpanded = false
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalAlignment = Alignment.Start
+                ) {
+                    FabMenuItem("Add Medicine", Icons.Rounded.AddCircle, GessoPrimary) {
+                        onAddMedicine()
+                        isExpanded = false
+                    }
+                    FabMenuItem("Scan Prescription", Icons.Rounded.QrCodeScanner, GessoAccentText) {
+                        onScanPrescription()
+                        isExpanded = false
+                    }
+                    FabMenuItem("Doctor Appointment", Icons.Rounded.MedicalServices, GessoSecondary) {
+                        onAddAppointment()
+                        isExpanded = false
+                    }
+                    FabMenuItem("Add Family", Icons.Rounded.GroupAdd, GessoSuccess) {
+                        onAddFamily()
+                        isExpanded = false
+                    }
                 }
             }
         }
 
         Surface(
             modifier = Modifier
-                .height(84.dp)
-                .fillMaxWidth()
-                .shadow(
-                    elevation = 8.dp,
-                    shape = RoundedCornerShape(Radius.bottomNav),
-                    spotColor = Color.Black.copy(alpha = 0.15f)
-                ),
-            color = MaterialTheme.colorScheme.surface,
-            shape = RoundedCornerShape(Radius.bottomNav)
+                .height(64.dp)
+                .fillMaxWidth(),
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+            shape = RoundedCornerShape(GessoRadius.full),
+            shadowElevation = 8.dp
         ) {
             Row(
                 modifier = Modifier.fillMaxSize(),
@@ -328,16 +476,10 @@ fun FloatingBottomNavigation(
                         Spacer(modifier = Modifier.weight(1f))
                     } else {
                         val selected = currentRoute == item.route
-                        val scale by animateFloatAsState(
-                            targetValue = if (selected) 1.15f else 1f,
-                            animationSpec = tween(Motion.normal),
-                            label = "navScale"
-                        )
                         
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .clip(RoundedCornerShape(Radius.bottomNav))
                                 .clickable(
                                     interactionSource = remember { MutableInteractionSource() },
                                     indication = null
@@ -350,43 +492,23 @@ fun FloatingBottomNavigation(
                                 },
                             contentAlignment = Alignment.Center
                         ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center,
-                                modifier = Modifier.scale(scale)
-                            ) {
-                                Icon(
-                                    imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
-                                    contentDescription = item.title,
-                                    tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                                    modifier = Modifier.size(28.dp)
-                                )
-                                Text(
-                                    text = item.title,
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                                    color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                                    maxLines = 1,
-                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                                )
-                            }
+                            Icon(
+                                imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
+                                contentDescription = item.title,
+                                tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(28.dp)
+                            )
                         }
                     }
                 }
             }
         }
 
-        // Center FAB
-        val rotation by animateFloatAsState(if (isExpanded) 45f else 0f, label = "fabRotation")
         Box(
             modifier = Modifier
-                .offset(y = (-30).dp)
-                .size(64.dp)
-                .shadow(Shadow.fab, CircleShape)
-                .background(
-                    Brush.verticalGradient(listOf(PrimaryTeal, PrimaryTealDark)),
-                    CircleShape
-                )
+                .offset(y = (-14).dp)
+                .size(60.dp)
+                .background(MaterialTheme.colorScheme.primary, CircleShape)
                 .clickable {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     isExpanded = !isExpanded
@@ -396,10 +518,8 @@ fun FloatingBottomNavigation(
             Icon(
                 imageVector = Icons.Rounded.Add,
                 contentDescription = "Add",
-                tint = Color.White,
-                modifier = Modifier
-                    .size(36.dp)
-                    .graphicsLayer(rotationZ = rotation)
+                tint = Color.Black,
+                modifier = Modifier.size(32.dp)
             )
         }
     }
@@ -411,21 +531,20 @@ fun FabMenuItem(label: String, icon: ImageVector, color: Color, onClick: () -> U
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Start
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Surface(
             modifier = Modifier.size(40.dp),
             shape = CircleShape,
-            color = color.copy(alpha = 0.1f)
+            color = color.copy(alpha = 0.12f)
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(icon, null, tint = color, modifier = Modifier.size(20.dp))
             }
         }
-        Spacer(Modifier.width(12.dp))
-        Text(text = label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+        Spacer(Modifier.width(16.dp))
+        Text(text = label, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
     }
 }
 
@@ -446,15 +565,14 @@ fun SectionTitle(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = Spacing.tiny, vertical = Spacing.small),
+            .padding(vertical = GessoSpacing.s2),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
+            style = MaterialTheme.typography.headlineLarge,
+            color = MaterialTheme.colorScheme.onBackground
         )
         if (actionText != null && onActionClick != null) {
             Text(
@@ -464,342 +582,6 @@ fun SectionTitle(
                 modifier = Modifier.clickable { onActionClick() }
             )
         }
-    }
-}
-
-@Composable
-fun StatCard(
-    label: String,
-    value: String,
-    icon: ImageVector,
-    color: Color,
-    modifier: Modifier = Modifier,
-    subtitle: String? = null
-) {
-    AppCard(
-        modifier = modifier.height(100.dp),
-        backgroundColor = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(Radius.medium),
-        elevation = Shadow.card,
-        border = true,
-        contentPadding = PaddingValues(8.dp)
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
-            
-            Text(
-                text = value, 
-                fontWeight = FontWeight.ExtraBold, 
-                fontSize = 22.sp,
-                color = MaterialTheme.colorScheme.onSurface,
-                lineHeight = 24.sp,
-                maxLines = 1
-            )
-            
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = label, 
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp), 
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun EmptyState(
-    illustration: @Composable () -> Unit,
-    title: String,
-    description: String,
-    actionText: String? = null,
-    onActionClick: (() -> Unit)? = null
-) {
-    val accessibilityMode = LocalAccessibilityMode.current
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(Spacing.large),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        illustration()
-        Spacer(Modifier.height(Spacing.section))
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Spacer(Modifier.height(Spacing.small))
-        Text(
-            text = description,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
-        if (actionText != null && onActionClick != null) {
-            Spacer(Modifier.height(Spacing.section))
-            PrimaryButton(text = actionText, onClick = onActionClick, modifier = Modifier.width(if (accessibilityMode) 280.dp else 220.dp))
-        }
-    }
-}
-
-@Composable
-fun ShimmerItem(
-    modifier: Modifier = Modifier,
-    height: Dp = 100.dp,
-    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(Radius.medium)
-) {
-    val transition = rememberInfiniteTransition(label = "shimmer")
-    val translateAnim by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1000f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1200, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "shimmer"
-    )
-
-    val shimmerColors = listOf(
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-    )
-
-    val brush = Brush.linearGradient(
-        colors = shimmerColors,
-        start = androidx.compose.ui.geometry.Offset.Zero,
-        end = androidx.compose.ui.geometry.Offset(x = translateAnim, y = translateAnim)
-    )
-
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(height)
-            .background(brush, shape)
-    )
-}
-
-@Composable
-fun ErrorBanner(
-    message: String,
-    onRetry: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    AppCard(
-        modifier = modifier.fillMaxWidth(),
-        backgroundColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.1f),
-        border = true,
-        elevation = 0.dp
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.ErrorOutline, null, tint = MaterialTheme.colorScheme.error)
-            Spacer(Modifier.width(Spacing.card))
-            Text(
-                text = message, 
-                style = MaterialTheme.typography.bodySmall, 
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.weight(1f)
-            )
-            TextButton(onClick = onRetry) {
-                Text("Retry", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
-            }
-        }
-    }
-}
-
-@Composable
-fun TimeWheelPicker(
-    onTimeSelected: (Int, Int) -> Unit
-) {
-    var selectedHour by remember { mutableIntStateOf(8) }
-    var selectedMinute by remember { mutableIntStateOf(0) }
-    var isPm by remember { mutableStateOf(false) }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(150.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center
-    ) {
-        WheelColumn(
-            items = (1..12).toList(),
-            initialIndex = 7,
-            onItemSelected = { selectedHour = it }
-        )
-        Text(":", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(horizontal = Spacing.small))
-        WheelColumn(
-            items = (0..59).map { it.toString().padStart(2, '0') },
-            initialIndex = 0,
-            onItemSelected = { selectedMinute = it.toInt() }
-        )
-        Spacer(Modifier.width(Spacing.card))
-        Column {
-            Text(
-                "AM",
-                modifier = Modifier
-                    .clickable { isPm = false }
-                    .padding(Spacing.small),
-                color = if (!isPm) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = if (!isPm) FontWeight.Bold else FontWeight.Normal
-            )
-            Text(
-                "PM",
-                modifier = Modifier
-                    .clickable { isPm = true }
-                    .padding(Spacing.small),
-                color = if (isPm) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = if (isPm) FontWeight.Bold else FontWeight.Normal
-            )
-        }
-    }
-
-    LaunchedEffect(selectedHour, selectedMinute, isPm) {
-        val hour24 = if (isPm) {
-            if (selectedHour == 12) 12 else selectedHour + 12
-        } else {
-            if (selectedHour == 12) 0 else selectedHour
-        }
-        onTimeSelected(hour24, selectedMinute)
-    }
-}
-
-@Composable
-fun <T> WheelColumn(
-    items: List<T>,
-    initialIndex: Int,
-    onItemSelected: (T) -> Unit
-) {
-    val itemHeight = 40.dp
-    val listState = rememberLazyListState(initialIndex)
-    val snapFlingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
-    val density = androidx.compose.ui.platform.LocalDensity.current
-
-    Box(
-        modifier = Modifier
-            .width(60.dp)
-            .height(itemHeight * 3),
-        contentAlignment = Alignment.Center
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(itemHeight)
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.05f), RoundedCornerShape(Radius.small))
-        )
-
-        LazyColumn(
-            state = listState,
-            flingBehavior = snapFlingBehavior,
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            items(items.size + 2) { index ->
-                if (index == 0 || index == items.size + 1) {
-                    Spacer(modifier = Modifier.height(itemHeight))
-                } else {
-                    val item = items[index - 1]
-                    Text(
-                        text = item.toString(),
-                        modifier = Modifier
-                            .height(itemHeight)
-                            .wrapContentHeight(),
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
-        }
-    }
-
-    LaunchedEffect(listState.isScrollInProgress) {
-        if (!listState.isScrollInProgress) {
-            val itemHeightPx = with(density) { itemHeight.toPx() }
-            val index = listState.firstVisibleItemIndex + 
-                if (listState.firstVisibleItemScrollOffset > itemHeightPx / 2) 1 else 0
-            
-            if (index in items.indices) {
-                onItemSelected(items[index])
-            }
-        }
-    }
-}
-
-fun Modifier.dashedBorder(
-    color: Color,
-    strokeWidth: Dp = 1.dp,
-    dashLength: Dp = 4.dp,
-    gapLength: Dp = 4.dp,
-    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(Radius.medium)
-) = this.drawBehind {
-    val stroke = Stroke(
-        width = strokeWidth.toPx(),
-        pathEffect = PathEffect.dashPathEffect(
-            floatArrayOf(dashLength.toPx(), gapLength.toPx()),
-            0f
-        )
-    )
-    
-    val outline = shape.createOutline(size, layoutDirection, this)
-    drawOutline(outline, color, style = stroke)
-}
-@Composable
-fun PremiumCard(
-    modifier: Modifier = Modifier,
-    backgroundColor: Color = MaterialTheme.colorScheme.surface,
-    contentColor: Color = MaterialTheme.colorScheme.onSurface,
-    elevation: Dp = Shadow.card,
-    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(Radius.large),
-    onClick: (() -> Unit)? = null,
-    border: Boolean = false,
-    contentPadding: PaddingValues? = null,
-    isGlass: Boolean = false,
-    content: @Composable (ColumnScope.() -> Unit)
-) = AppCard(modifier, backgroundColor, contentColor, elevation, shape, onClick, border, contentPadding, isGlass, content)
-
-@Composable
-fun PremiumButton(
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    icon: ImageVector? = null,
-    containerColor: Color = MaterialTheme.colorScheme.primary,
-    contentColor: Color = Color.White,
-    enabled: Boolean = true
-) = PrimaryButton(text, onClick, modifier, containerColor, contentColor, icon, false, enabled)
-
-@Composable
-fun PremiumFloatingActionButton(
-    icon: ImageVector,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    containerColor: Color = MaterialTheme.colorScheme.primary
-) {
-    val haptic = LocalHapticFeedback.current
-    FloatingActionButton(
-        onClick = {
-            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-            onClick()
-        },
-        modifier = modifier.shadow(Shadow.fab, CircleShape),
-        containerColor = containerColor,
-        contentColor = Color.White,
-        shape = CircleShape,
-        elevation = FloatingActionButtonDefaults.elevation(0.dp)
-    ) {
-        Icon(icon, contentDescription = null, modifier = Modifier.size(32.dp))
     }
 }
 
@@ -814,30 +596,29 @@ fun SettingsItem(
             Icons.Rounded.ChevronRight, 
             null, 
             modifier = Modifier.size(24.dp), 
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
         ) 
     }
 ) {
-    val accessibilityMode = LocalAccessibilityMode.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(if (accessibilityMode) 80.dp else 64.dp)
+            .height(64.dp)
             .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Surface(
             modifier = Modifier.size(40.dp),
-            shape = RoundedCornerShape(Radius.small),
-            color = MaterialTheme.colorScheme.primaryContainer
+            shape = RoundedCornerShape(GessoRadius.sm),
+            color = MaterialTheme.colorScheme.surfaceVariant
         ) {
             Box(contentAlignment = Alignment.Center) {
-                Icon(icon, null, modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.primary)
+                Icon(icon, null, modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.onSurface)
             }
         }
-        Spacer(modifier = Modifier.width(Spacing.card))
+        Spacer(modifier = Modifier.width(GessoSpacing.s2))
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+            Text(text = title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
             if (subtitle != null) {
                 Text(text = subtitle, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -849,9 +630,35 @@ fun SettingsItem(
 }
 
 @Composable
-fun AnimatedFAB(
+fun PremiumCard(
+    modifier: Modifier = Modifier,
+    backgroundColor: Color = MaterialTheme.colorScheme.surface,
+    contentColor: Color = MaterialTheme.colorScheme.onSurface,
+    elevation: Dp = 1.dp,
+    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(GessoRadius.md),
+    onClick: (() -> Unit)? = null,
+    border: Boolean = true,
+    contentPadding: PaddingValues? = null,
+    content: @Composable (ColumnScope.() -> Unit)
+) = AppCard(modifier, backgroundColor, contentColor, elevation, shape, onClick, border, contentPadding, content)
+
+@Composable
+fun PremiumButton(
+    text: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+    containerColor: Color = MaterialTheme.colorScheme.primary,
+    contentColor: Color = Color.Black,
+    enabled: Boolean = true
+) = PrimaryButton(text, onClick, modifier, containerColor, contentColor, icon, false, enabled, false)
+
+@Composable
+fun PremiumFloatingActionButton(
+    icon: ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    containerColor: Color = MaterialTheme.colorScheme.primary
 ) {
     val haptic = LocalHapticFeedback.current
     FloatingActionButton(
@@ -859,20 +666,17 @@ fun AnimatedFAB(
             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             onClick()
         },
-        modifier = modifier
-            .padding(Spacing.card)
-            .size(64.dp),
+        modifier = modifier.size(56.dp),
+        containerColor = containerColor,
+        contentColor = Color.Black,
         shape = CircleShape,
-        containerColor = MaterialTheme.colorScheme.primary,
-        contentColor = Color.White,
-        elevation = FloatingActionButtonDefaults.elevation(Shadow.fab)
+        elevation = FloatingActionButtonDefaults.elevation(2.dp)
     ) {
-        Icon(Icons.Default.Add, contentDescription = "Add", modifier = Modifier.size(32.dp))
+        Icon(icon, contentDescription = null, modifier = Modifier.size(24.dp))
     }
 }
 
 @Preview(uiMode = Configuration.UI_MODE_NIGHT_NO, name = "Light Mode")
-@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, name = "Dark Mode")
 @Composable
 fun DesignSystemPreview() {
     MediTimeMedicineReminderTheme {
@@ -880,10 +684,12 @@ fun DesignSystemPreview() {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 SectionTitle(title = "Design System Components")
                 AppCard {
-                    Text("This is a standard card", modifier = Modifier.padding(16.dp))
+                    Text("This is a standard card", style = MaterialTheme.typography.bodyLarge)
                 }
                 PrimaryButton(text = "Primary Button", onClick = {})
                 SecondaryButton(text = "Secondary Button", onClick = {})
+                GessoInput(value = "", onValueChange = {}, placeholder = "Input Field")
+                GessoBadge(text = "Status Badge")
                 SettingsItem(icon = Icons.Rounded.Settings, title = "Settings Item", subtitle = "This is a subtitle")
             }
         }
