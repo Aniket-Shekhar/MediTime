@@ -60,7 +60,7 @@ fun DashboardScreen(
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
-                bottom = 120.dp,
+                bottom = 160.dp,
                 top = 24.dp,
                 start = GessoSpacing.s4,
                 end = GessoSpacing.s4
@@ -284,7 +284,10 @@ fun FamilyMedicineHero(state: DashboardState, onClick: () -> Unit) {
             }
 
             // Next Dose Info
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 Text(
                     text = "NEXT DOSE",
                     style = MaterialTheme.typography.labelSmall,
