@@ -44,6 +44,7 @@ import com.google.firebase.database.FirebaseDatabase
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlin.time.Duration.Companion.milliseconds
 
 @AndroidEntryPoint
 class MainActivity : androidx.fragment.app.FragmentActivity() {
@@ -113,7 +114,7 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                 try {
                     // Part 1: Background Warm-up (Database & Auth)
                     // Added timeout to prevent hanging on startup
-                    kotlinx.coroutines.withTimeout(5000L) {
+                    kotlinx.coroutines.withTimeout(5000L.milliseconds) {
                         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                             // Wait for first auth emission
                             authRepository.currentUser.first()
