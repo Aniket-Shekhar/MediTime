@@ -26,63 +26,72 @@ val ManropeFamily = FontFamily(
 )
 
 fun getTypography(scale: Float = 1f): Typography {
+    val fs1 = 48 * scale
+    val fs2 = 36 * scale
+    val fs3 = 28 * scale
+    val fs4 = 24 * scale
+    val fs5 = 20 * scale
+    val fs6 = 16 * scale
+    val fs7 = 14 * scale
+    val fs8 = 12 * scale
+
     return Typography(
         displayLarge = TextStyle(
             fontFamily = ManropeFamily,
             fontWeight = FontWeight.ExtraBold,
-            fontSize = (48 * scale).sp,
-            lineHeight = 1.1.sp,
-            letterSpacing = (-0.02 * 48).sp
+            fontSize = fs1.sp,
+            lineHeight = (fs1 * 1.2f).sp,
+            letterSpacing = (-0.02f * fs1).sp
         ),
         displayMedium = TextStyle(
             fontFamily = ManropeFamily,
             fontWeight = FontWeight.Bold,
-            fontSize = (36 * scale).sp,
-            lineHeight = 1.1.sp,
-            letterSpacing = (-0.02 * 36).sp
+            fontSize = fs2.sp,
+            lineHeight = (fs2 * 1.2f).sp,
+            letterSpacing = (-0.02f * fs2).sp
         ),
         displaySmall = TextStyle(
             fontFamily = ManropeFamily,
             fontWeight = FontWeight.SemiBold,
-            fontSize = (28 * scale).sp,
-            lineHeight = 1.1.sp,
-            letterSpacing = (-0.02 * 28).sp
+            fontSize = fs3.sp,
+            lineHeight = (fs3 * 1.2f).sp,
+            letterSpacing = (-0.02f * fs3).sp
         ),
         headlineLarge = TextStyle(
             fontFamily = ManropeFamily,
             fontWeight = FontWeight.Bold,
-            fontSize = (24 * scale).sp,
-            lineHeight = 1.2.sp
+            fontSize = fs4.sp,
+            lineHeight = (fs4 * 1.3f).sp
         ),
         titleLarge = TextStyle(
             fontFamily = ManropeFamily,
             fontWeight = FontWeight.SemiBold,
-            fontSize = (20 * scale).sp,
-            lineHeight = 1.2.sp
+            fontSize = fs5.sp,
+            lineHeight = (fs5 * 1.3f).sp
         ),
         bodyLarge = TextStyle(
             fontFamily = ManropeFamily,
             fontWeight = FontWeight.Normal,
-            fontSize = (16 * scale).sp,
-            lineHeight = 1.5.sp
+            fontSize = fs6.sp,
+            lineHeight = (fs6 * 1.4f).sp
         ),
         bodyMedium = TextStyle(
             fontFamily = ManropeFamily,
             fontWeight = FontWeight.Normal,
-            fontSize = (14 * scale).sp,
-            lineHeight = 1.5.sp
+            fontSize = fs7.sp,
+            lineHeight = (fs7 * 1.4f).sp
         ),
         labelLarge = TextStyle(
             fontFamily = ManropeFamily,
             fontWeight = FontWeight.SemiBold,
-            fontSize = (14 * scale).sp,
-            lineHeight = 1.5.sp
+            fontSize = fs7.sp,
+            lineHeight = (fs7 * 1.4f).sp
         ),
         labelSmall = TextStyle(
             fontFamily = ManropeFamily,
             fontWeight = FontWeight.Medium,
-            fontSize = (12 * scale).sp,
-            lineHeight = 1.5.sp
+            fontSize = fs8.sp,
+            lineHeight = (fs8 * 1.4f).sp
         )
     )
 }

@@ -207,39 +207,43 @@ fun FamilyMedicineHero(state: DashboardState, onClick: () -> Unit) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(GessoSpacing.s2)
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Surface(
-                modifier = Modifier.size(64.dp),
-                shape = CircleShape,
-                border = androidx.compose.foundation.BorderStroke(3.dp, GessoDivider)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(GessoSpacing.s3)
             ) {
-                AsyncImage(
-                    model = "https://ui-avatars.com/api/?name=Mom&background=ebebeb&color=000",
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop
-                )
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Mom",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = GessoFg
-                )
-                Text(
-                    text = "${state.completedDosesToday} of ${state.totalDosesToday} medicines taken today",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = GessoFgMuted
-                )
+                Surface(
+                    modifier = Modifier.size(56.dp),
+                    shape = CircleShape,
+                    border = androidx.compose.foundation.BorderStroke(3.dp, GessoDivider)
+                ) {
+                    AsyncImage(
+                        model = "https://ui-avatars.com/api/?name=Mom&background=ebebeb&color=000",
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop
+                    )
+                }
+                Column {
+                    Text(
+                        text = "Mom",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = GessoFg
+                    )
+                    Text(
+                        text = "${state.completedDosesToday} of ${state.totalDosesToday} medicines taken today",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = GessoFgMuted
+                    )
+                }
             }
             Surface(
                 color = GessoSecondary,
-                shape = RoundedCornerShape(GessoRadius.full),
-                modifier = Modifier.align(Alignment.Top)
+                shape = RoundedCornerShape(GessoRadius.full)
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
